@@ -6,7 +6,28 @@ const apiKey = process.env.TOMTOM_API_KEY || 'QuSopbXau96swtFznGbYJV74BYwuZAML';
 const originCoords = { lat: 47.6167589, lon: -122.3488781 }; // 225 Cedar St, Seattle
 const destCoords = { lat: 47.6702148, lon: -122.1973175 };   // Google Kirkland
 
-async function pollTraffic(direction = 'morning') {
+function getPacificTime(date = new Date()) {
+  const options = { timeZone: 'America/Los_Angeles' };
+  
+  const dateStr = date.toLocaleDateString('en-US', { ...options, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const timeStr = date.toLocaleTimeString('en-US', { ...options, hour: '2-digit', minute: '2-digit', hour12: false });
+  const dayOfWeek = date.toLocaleDateString('en-US', { ...options, weekday: 'long' });
+  
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayIndex = dayNames.indexOf(dayOfWeek);
+
+  const hourStr = date.toLocaleTimeString('en-US', { ...options, hour: '2-digit', hour12: false });
+  const hour = parseInt(hourStr, 10) % 24;
+
+  return { dateStr, dayOfWeek, dayIndex, timeStr, hour };
+}
+
+async function pollTraffic() {
+  const now = new Date();
+  const pt = getPacificTime(now);
+
+  // Morning direction (Seattle -> Kirkland) for 4:00 AM - 12:00 PM, Evening (Kirkland -> Seattle) for 12:00 PM - 4:00 AM
+  const direction = (pt.hour >= 4 && pt.hour < 12) ? 'morning' : 'evening';
   const start = direction === 'morning' ? originCoords : destCoords;
   const end = direction === 'morning' ? destCoords : originCoords;
 
@@ -41,17 +62,15 @@ async function pollTraffic(direction = 'morning') {
     const sr520 = routes.find(r => r.name.includes('520')) || routes[0];
     const i90 = routes.find(r => r.name.includes('90')) || routes[1] || sr520;
 
-    const now = new Date();
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const snapshot = {
       id: `snap_${now.getTime()}`,
       timestamp: now.getTime(),
       isoDate: now.toISOString(),
-      dateStr: now.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' }),
-      dayOfWeek: dayNames[now.getDay()],
-      dayIndex: now.getDay(),
-      timeStr: now.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false }),
-      hour: now.getHours(),
+      dateStr: pt.dateStr,
+      dayOfWeek: pt.dayOfWeek,
+      dayIndex: pt.dayIndex,
+      timeStr: pt.timeStr,
+      hour: pt.hour,
       direction,
       sr520Time: sr520.travelTimeMins,
       sr520Delay: sr520.delayMins,
@@ -69,21 +88,14 @@ async function pollTraffic(direction = 'morning') {
     }
 
     history.push(snapshot);
-    if (history.length > 10000) history.shift(); // Keep last 10,000 snapshots
+    if (history.length > 10000) history.shift();
 
     fs.writeFileSync(filePath, JSON.stringify(history, null, 2), 'utf-8');
-    console.log(`[Cloud Poller Success] Recorded snapshot at ${snapshot.timeStr} (${direction}): SR-520 ${sr520.travelTimeMins}m, I-90 ${i90.travelTimeMins}m`);
+    console.log(`[Cloud Poller Success] Recorded snapshot at ${pt.dateStr} ${pt.timeStr} ${pt.dayOfWeek} (Hour: ${pt.hour}, Direction: ${direction}): SR-520 ${sr520.travelTimeMins}m, I-90 ${i90.travelTimeMins}m`);
 
   } catch (err) {
     console.error('Error polling traffic in cloud script:', err);
   }
 }
 
-async function run() {
-  const currentHour = new Date().getHours();
-  // Morning direction (Seattle -> Kirkland) for AM, Evening (Kirkland -> Seattle) for PM
-  const direction = (currentHour >= 12) ? 'evening' : 'morning';
-  await pollTraffic(direction);
-}
-
-run();
+pollTraffic();
