@@ -282,17 +282,23 @@ function getSR520TollRate(date = new Date()) {
 }
 
 function processRoutes(rawRoutes) {
+  if (!Array.isArray(rawRoutes)) {
+    appState.routes = [];
+    return;
+  }
+
   appState.routes = rawRoutes.map((route, idx) => {
-    const miles = parseFloat((route.summary.lengthInMeters / 1609.34).toFixed(1));
-    const travelTimeMins = Math.round(route.summary.travelTimeInSeconds / 60);
-    const delayMins = Math.round(route.summary.trafficDelayInSeconds / 60);
-    const noTrafficMins = Math.round(route.summary.noTrafficTravelTimeInSeconds / 60);
+    const summary = route?.summary || {};
+    const miles = parseFloat(((summary.lengthInMeters || 0) / 1609.34).toFixed(1));
+    const travelTimeMins = Math.round((summary.travelTimeInSeconds || 0) / 60);
+    const delayMins = Math.round((summary.trafficDelayInSeconds || 0) / 60);
+    const noTrafficMins = Math.round((summary.noTrafficTravelTimeInSeconds || 0) / 60);
     const speedMph = travelTimeMins > 0 ? Math.round((miles / (travelTimeMins / 60))) : 0;
     
     let category = 'Alternate Route';
     let isToll = false;
 
-    const instructionsText = route.guidance?.instructions?.map(i => i.message).join(' ') || '';
+    const instructionsText = route?.guidance?.instructions?.map(i => i?.message).filter(Boolean).join(' ') || '';
     
     if (instructionsText.includes('520') || miles < 14) {
       category = 'SR-520 Bridge';
@@ -305,7 +311,8 @@ function processRoutes(rawRoutes) {
       isToll = false;
     }
 
-    const points = route.legs.flatMap(leg => leg.points.map(pt => [pt.latitude, pt.longitude]));
+    const legs = route?.legs || [];
+    const points = legs.flatMap(leg => (leg?.points || []).map(pt => [pt.latitude, pt.longitude])).filter(pt => pt && pt[0] && pt[1]);
 
     return {
       index: idx,
@@ -316,8 +323,8 @@ function processRoutes(rawRoutes) {
       noTrafficMins,
       speedMph,
       isToll,
-      summary: route.summary,
-      instructions: route.guidance?.instructions || [],
+      summary,
+      instructions: route?.guidance?.instructions || [],
       points
     };
   });
@@ -459,8 +466,10 @@ function renderIncidents() {
   const container = el.incidentsContainer;
   const countBadge = el.incidentCount;
 
-  const incidents = appState.incidents;
-  countBadge.textContent = incidents.length;
+  const incidents = Array.isArray(appState.incidents) ? appState.incidents : [];
+  if (countBadge) countBadge.textContent = incidents.length;
+
+  if (!container) return;
 
   if (incidents.length === 0) {
     container.innerHTML = `<div class="no-incidents">No major incidents reported on SR-520 / I-90 corridor.</div>`;
@@ -468,8 +477,10 @@ function renderIncidents() {
   }
 
   container.innerHTML = incidents.slice(0, 5).map(inc => {
-    const desc = inc.properties.events?.map(e => e.description).join(', ') || 'Traffic Incident';
-    const delayMins = inc.properties.delay ? Math.round(inc.properties.delay / 60) : null;
+    const desc = inc?.properties?.events?.map(e => e?.description).filter(Boolean).join(', ')
+      || inc?.properties?.iconCategory 
+      || 'Traffic Incident';
+    const delayMins = inc?.properties?.delay ? Math.round(inc.properties.delay / 60) : null;
     const delayText = delayMins ? `+${delayMins} min delay` : '';
 
     return `
@@ -483,23 +494,25 @@ function renderIncidents() {
 }
 
 function renderInstructions() {
-  const selectedRoute = appState.routes[appState.selectedRouteIndex];
+  const selectedRoute = appState.routes?.[appState.selectedRouteIndex];
   if (!selectedRoute) return;
 
-  el.activeRouteName.textContent = selectedRoute.name;
+  if (el.activeRouteName) el.activeRouteName.textContent = selectedRoute.name || 'SR-520 Bridge';
 
   if (!selectedRoute.instructions || selectedRoute.instructions.length === 0) {
-    el.instructionsList.innerHTML = `<li>Turn-by-turn guidance unavailable for this route.</li>`;
+    if (el.instructionsList) el.instructionsList.innerHTML = `<li>Turn-by-turn guidance unavailable for this route.</li>`;
     return;
   }
 
-  el.instructionsList.innerHTML = selectedRoute.instructions.map(ins => {
-    return `<li>${ins.message}</li>`;
-  }).join('');
+  if (el.instructionsList) {
+    el.instructionsList.innerHTML = selectedRoute.instructions.map(ins => {
+      return `<li>${ins?.message || 'Proceed on route'}</li>`;
+    }).join('');
+  }
 }
 
 function updateOptimalDepartureAdvisor() {
-  const sr520Route = appState.routes.find(r => r.name.includes('520')) || appState.routes[0];
+  const sr520Route = appState.routes?.find(r => r?.name?.includes('520')) || appState.routes?.[0] || { travelTimeMins: 22, delayMins: 0 };
   const nowHour = new Date().getHours();
   const isMorningWindow = nowHour >= 6 && nowHour <= 10;
   const isEveningWindow = nowHour >= 15 && nowHour <= 19;
@@ -535,8 +548,8 @@ function updateOptimalDepartureAdvisor() {
     }
   }
 
-  el.optimalTimeHeading.textContent = adviceTitle;
-  el.optimalTimeText.textContent = adviceText;
+  if (el.optimalTimeHeading) el.optimalTimeHeading.textContent = adviceTitle;
+  if (el.optimalTimeText) el.optimalTimeText.textContent = adviceText;
 }
 
 function initChart() {
