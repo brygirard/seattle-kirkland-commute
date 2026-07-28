@@ -2,9 +2,10 @@ name: 24/7 Commute Traffic Poller
 
 on:
   schedule:
-    # Run every 5 minutes 24/7
     - cron: '*/5 * * * *'
-  workflow_dispatch: # Allows manual trigger anytime from GitHub UI
+  workflow_dispatch:
+  repository_dispatch:
+    types: [poll_traffic]
 
 jobs:
   poll-and-commit:
