@@ -69,7 +69,6 @@ const el = {
   btnExportCsv: document.getElementById('btn-export-csv'),
   btnExportJson: document.getElementById('btn-export-json'),
   fileImport: document.getElementById('file-import'),
-  btnClearHistory: document.getElementById('btn-clear-history'),
 
   toggleTrafficLayer: document.getElementById('toggle-traffic-layer'),
   toggleIncidentsLayer: document.getElementById('toggle-incidents-layer'),
@@ -990,12 +989,6 @@ function setupEventListeners() {
   el.btnExportCsv.addEventListener('click', exportCSV);
   el.btnExportJson.addEventListener('click', exportJSON);
   el.fileImport.addEventListener('change', (e) => importDataFile(e.target.files[0]));
-  el.btnClearHistory.addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear all logged traffic history data?')) {
-      localStorage.removeItem('commute_historical_db');
-      updateTrendChart();
-    }
-  });
 
   el.btnSettings.addEventListener('click', () => {
     el.apiKeyInput.value = CONFIG.apiKey;
