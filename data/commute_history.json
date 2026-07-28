@@ -52,5 +52,23 @@
     "i90Delay": 0,
     "i90Distance": "16.5",
     "incidentsCount": 68
+  },
+  {
+    "id": "snap_1785216948159",
+    "timestamp": 1785216948159,
+    "isoDate": "2026-07-28T05:35:48.159Z",
+    "dateStr": "07/27/2026",
+    "dayOfWeek": "Monday",
+    "dayIndex": 1,
+    "timeStr": "22:35",
+    "hour": 22,
+    "direction": "evening",
+    "sr520Time": 21,
+    "sr520Delay": 0,
+    "sr520Distance": "11.8",
+    "i90Time": 25,
+    "i90Delay": 0,
+    "i90Distance": "16.5",
+    "incidentsCount": 68
   }
 ]
