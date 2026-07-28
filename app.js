@@ -667,9 +667,26 @@ function updateTrendChart() {
   const historyRaw = getHistoricalDatabase();
   const history = historyRaw.map(normalizeHistoryItem);
 
-  const filteredHistory = dayFilter === 'all' 
-    ? history 
-    : history.filter(h => String(h.dayIndex) === String(dayFilter));
+  let filteredHistory = history.filter(item => {
+    // 1. Sanitize bad data points / test artifacts (< 15 mins travel time)
+    const mTime = item.morning?.sr520Time || 0;
+    const eTime = item.evening?.sr520Time || 0;
+    if (mTime < 15 && eTime < 15) return false;
+
+    // 2. Filter by Day of Week if selected
+    if (dayFilter !== 'all' && String(item.dayIndex) !== String(dayFilter)) {
+      return false;
+    }
+
+    // 3. Filter by Time Window selected in UI
+    if (timeWindow === 'morning') {
+      return item.hour >= 6 && item.hour < 11;
+    } else if (timeWindow === 'evening') {
+      return item.hour >= 15 && item.hour < 20;
+    }
+
+    return true;
+  });
 
   let labels = [];
   let datasets = [];
