@@ -637,12 +637,32 @@ function normalizeHistoryItem(item) {
   };
 }
 
+function applyMovingAverage(arr, windowSize = 3) {
+  if (!Array.isArray(arr) || arr.length <= 2) return arr;
+  const result = [];
+  const half = Math.floor(windowSize / 2);
+
+  for (let i = 0; i < arr.length; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let j = i - half; j <= i + half; j++) {
+      if (j >= 0 && j < arr.length && typeof arr[j] === 'number') {
+        sum += arr[j];
+        count++;
+      }
+    }
+    result.push(count > 0 ? Math.round((sum / count) * 10) / 10 : arr[i]);
+  }
+  return result;
+}
+
 function updateTrendChart() {
   if (!appState.trendChart) return;
 
   const mode = appState.activeTrendWindow;
   const timeWindow = appState.selectedTimeWindow;
   const dayFilter = appState.selectedDayFilter;
+  const isSmooth = document.getElementById('toggle-smooth-data')?.checked ?? true;
 
   const historyRaw = getHistoricalDatabase();
   const history = historyRaw.map(normalizeHistoryItem);
@@ -680,54 +700,61 @@ function updateTrendChart() {
     datasets = [
       {
         label: 'TomTom Historic SR-520 (Toll)',
-        data: baselineSR520,
+        data: isSmooth ? applyMovingAverage(baselineSR520) : baselineSR520,
         borderColor: '#06b6d4',
         backgroundColor: 'rgba(6, 182, 212, 0.12)',
         borderWidth: 2,
-        tension: 0.4,
+        tension: 0.45,
+        cubicInterpolationMode: 'monotone',
         fill: true,
-        pointRadius: 4
+        pointRadius: 3
       },
       {
         label: 'TomTom Historic I-90',
-        data: baselineI90,
+        data: isSmooth ? applyMovingAverage(baselineI90) : baselineI90,
         borderColor: '#8b5cf6',
         backgroundColor: 'rgba(139, 92, 246, 0.05)',
         borderWidth: 2,
         borderDash: [4, 4],
-        tension: 0.4,
+        tension: 0.45,
+        cubicInterpolationMode: 'monotone',
         fill: false,
-        pointRadius: 4
+        pointRadius: 3
       }
     ];
   } else if (mode === 'polledActual') {
     if (filteredHistory.length > 0) {
       labels = filteredHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
       const isMorn = CONFIG.direction === 'morning';
-      const actualSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
-      const actualI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+      const rawSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
+      const rawI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+
+      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
+      const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
 
       datasets = [
         {
-          label: `Polled SR-520 (${CONFIG.direction})`,
+          label: `Polled SR-520 (${CONFIG.direction}${isSmooth ? ' - Smoothed' : ''})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           borderWidth: 3,
-          tension: 0.2,
+          tension: 0.4,
+          cubicInterpolationMode: 'monotone',
           fill: true,
-          pointRadius: 5
+          pointRadius: filteredHistory.length > 50 ? 1.5 : 3
         },
         {
-          label: `Polled I-90 (${CONFIG.direction})`,
+          label: `Polled I-90 (${CONFIG.direction}${isSmooth ? ' - Smoothed' : ''})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
-          borderWidth: 2,
+          borderWidth: 2.5,
           borderDash: [3, 3],
-          tension: 0.2,
+          tension: 0.4,
+          cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: 4
+          pointRadius: filteredHistory.length > 50 ? 1.5 : 3
         }
       ];
     } else {
@@ -740,8 +767,11 @@ function updateTrendChart() {
     if (filteredHistory.length > 0) {
       labels = filteredHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
       const isMorn = CONFIG.direction === 'morning';
-      const actualSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
-      const actualI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+      const rawSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
+      const rawI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+
+      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
+      const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
 
       datasets = [
         {
@@ -749,35 +779,33 @@ function updateTrendChart() {
           data: baselineSR520,
           borderColor: 'rgba(6, 182, 212, 0.4)',
           borderWidth: 2,
-          borderDash: [5, 5],
+          borderDash: [4, 4],
           tension: 0.4,
           fill: false,
-          pointRadius: 2
+          pointRadius: 0
         },
         {
-          label: `Actual SR-520 (${CONFIG.direction})`,
+          label: `Polled Actual SR-520${isSmooth ? ' (Smoothed)' : ''}`,
           data: actualSR520,
           borderColor: '#10b981',
-          backgroundColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.15)',
           borderWidth: 3,
-          tension: 0.2,
-          fill: false,
-          pointRadius: 5
+          tension: 0.4,
+          cubicInterpolationMode: 'monotone',
+          fill: true,
+          pointRadius: 3
         },
         {
-          label: `Actual I-90 (${CONFIG.direction})`,
+          label: `Polled Actual I-90${isSmooth ? ' (Smoothed)' : ''}`,
           data: actualI90,
           borderColor: '#f59e0b',
+          backgroundColor: 'transparent',
           borderWidth: 2,
-          tension: 0.2,
+          tension: 0.4,
+          cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: 4
+          pointRadius: 3
         }
-      ];
-    } else {
-      datasets = [
-        { label: 'TomTom Historic SR-520', data: baselineSR520, borderColor: '#06b6d4', borderWidth: 2, tension: 0.4 },
-        { label: 'TomTom Historic I-90', data: baselineI90, borderColor: '#8b5cf6', borderWidth: 2, tension: 0.4 }
       ];
     }
   }
@@ -1024,6 +1052,11 @@ function setupEventListeners() {
     appState.selectedDayFilter = e.target.value;
     updateTrendChart();
   });
+
+  const smoothToggle = document.getElementById('toggle-smooth-data');
+  if (smoothToggle) {
+    smoothToggle.addEventListener('change', () => updateTrendChart());
+  }
 
   el.btnExportCsv.addEventListener('click', exportCSV);
   el.btnExportJson.addEventListener('click', exportJSON);
