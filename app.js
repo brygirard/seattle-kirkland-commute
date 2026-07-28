@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVisibilityHandler();
   updateQuotaBadge();
   updateDataPointsCount();
+  fetchLiveWeather();
   syncCloudData();
   loadCommuteData();
   
@@ -771,6 +772,31 @@ function setupVisibilityHandler() {
   });
 }
 
+// --- Weather & Data Functions ---
+async function fetchLiveWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=47.6167&longitude=-122.3489&current=temperature_2m,precipitation,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch';
+    const res = await fetch(url).then(r => r.json());
+    if (res.current) {
+      const temp = Math.round(res.current.temperature_2m);
+      const rain = res.current.precipitation;
+      const code = res.current.weather_code;
+      
+      let icon = '☀️';
+      if (rain > 0.05 || code >= 61) icon = '🌧️';
+      else if (code >= 45) icon = '🌫️';
+      else if (code >= 1 && code <= 3) icon = '⛅';
+
+      document.getElementById('weather-icon').textContent = icon;
+      document.getElementById('weather-temp').textContent = `${temp}°F ${rain > 0 ? `(${rain}")` : ''}`;
+      return { temp, rain, code };
+    }
+  } catch (e) {
+    console.warn('Live weather fetch error:', e);
+  }
+  return { temp: 60, rain: 0, code: 0 };
+}
+
 function exportCSV() {
   const rawHistory = getHistoricalDatabase();
   if (rawHistory.length === 0) {
@@ -779,7 +805,7 @@ function exportCSV() {
   }
 
   const history = rawHistory.map(normalizeHistoryItem);
-  const headers = ['Timestamp', 'ISO_Date', 'Day_of_Week', 'Time', 'Morning_SR520_Time', 'Morning_SR520_Delay', 'Morning_I90_Time', 'Morning_I90_Delay', 'Evening_SR520_Time', 'Evening_SR520_Delay', 'Evening_I90_Time', 'Evening_I90_Delay', 'Incidents'];
+  const headers = ['Timestamp', 'ISO_Date', 'Day_of_Week', 'Time', 'Morning_SR520_Time', 'Morning_SR520_Delay', 'Morning_I90_Time', 'Morning_I90_Delay', 'Evening_SR520_Time', 'Evening_SR520_Delay', 'Evening_I90_Time', 'Evening_I90_Delay', 'Temp_F', 'Rain_Inches', 'Incidents'];
   const rows = history.map(h => [
     h.timestamp,
     new Date(h.timestamp).toISOString(),
@@ -793,6 +819,8 @@ function exportCSV() {
     h.evening.sr520Delay,
     h.evening.i90Time,
     h.evening.i90Delay,
+    h.weather ? h.weather.temp : '--',
+    h.weather ? h.weather.rain : '0',
     h.incidents
   ]);
 

@@ -38,14 +38,32 @@ async function fetchRouteData(start, end) {
   };
 }
 
+async function fetchWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=47.6167&longitude=-122.3489&current=temperature_2m,precipitation,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch';
+    const res = await fetch(url).then(r => r.json());
+    if (res.current) {
+      return {
+        temp: Math.round(res.current.temperature_2m),
+        rain: res.current.precipitation,
+        code: res.current.weather_code
+      };
+    }
+  } catch (e) {
+    console.warn('Weather fetch error:', e.message);
+  }
+  return { temp: 60, rain: 0, code: 0 };
+}
+
 async function pollTraffic() {
   const bbox = '-122.38,47.58,-122.15,47.72';
   const incidentUrl = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${apiKey}&bbox=${bbox}&fields={incidents{type}}`;
 
   try {
-    const [morningData, eveningData, incidentRes] = await Promise.all([
+    const [morningData, eveningData, weatherData, incidentRes] = await Promise.all([
       fetchRouteData(seattleCoords, kirklandCoords), // Morning: Seattle -> Kirkland
       fetchRouteData(kirklandCoords, seattleCoords), // Evening: Kirkland -> Seattle
+      fetchWeather(),                                // Open-Meteo Seattle weather
       fetch(incidentUrl).then(r => r.json()).catch(() => ({ incidents: [] }))
     ]);
 
@@ -53,6 +71,7 @@ async function pollTraffic() {
       timestamp: Date.now(),
       morning: morningData,
       evening: eveningData,
+      weather: weatherData,
       incidents: (incidentRes.incidents || []).length
     };
 
@@ -71,7 +90,7 @@ async function pollTraffic() {
     fs.writeFileSync(filePath, JSON.stringify(history, null, 2), 'utf-8');
     
     const pDate = new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false });
-    console.log(`[Cloud Poller] ${pDate} PT | Morning 520:${morningData.sr520Time}m I90:${morningData.i90Time}m | Evening 520:${eveningData.sr520Time}m I90:${eveningData.i90Time}m`);
+    console.log(`[Cloud Poller] ${pDate} PT | Temp:${weatherData.temp}°F Rain:${weatherData.rain}" | Morning 520:${morningData.sr520Time}m I90:${morningData.i90Time}m | Evening 520:${eveningData.sr520Time}m I90:${eveningData.i90Time}m`);
 
   } catch (err) {
     console.error('Error polling traffic in cloud script:', err);
