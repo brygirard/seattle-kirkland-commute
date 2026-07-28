@@ -34,14 +34,3 @@ jobs:
           git add data/
           git status
           git diff-index --quiet HEAD || (git commit -m "auto: update commute traffic log [skip ci]" && git push)
-
-      - name: Trigger Next Run (5-Minute Chain)
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          curl -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/brygirard/seattle-kirkland-commute/dispatches \
-            -d '{"event_type": "poll_traffic"}'
