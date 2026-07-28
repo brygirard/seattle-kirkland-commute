@@ -222,10 +222,13 @@ async function loadCommuteData() {
 
     const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${start.lat},${start.lon}:${end.lat},${end.lon}/json?key=${CONFIG.apiKey}&computeTravelTimeFor=all&traffic=true&maxAlternatives=2&instructionsType=text`;
     
-    const [routeResponse, incidentsResponse] = await Promise.all([
+    const [routeResponse, incidentsResponse, weatherData] = await Promise.all([
       fetch(routeUrl).then(r => r.json()),
-      fetchIncidents()
+      fetchIncidents(),
+      fetchLiveWeather()
     ]);
+
+    appState.currentWeather = weatherData;
 
     if (routeResponse && routeResponse.routes && routeResponse.routes.length > 0) {
       processRoutes(routeResponse.routes);
@@ -771,6 +774,7 @@ function saveLiveSnapshot() {
     timestamp: now,
     morning: CONFIG.direction === 'morning' ? currentRouteData : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 },
     evening: CONFIG.direction === 'evening' ? currentRouteData : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 },
+    weather: appState.currentWeather || { temp: 60, rain: 0, code: 0 },
     incidents: appState.incidents.length
   };
 
@@ -815,18 +819,25 @@ async function fetchLiveWeather() {
   try {
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=47.6167&longitude=-122.3489&current=temperature_2m,precipitation,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch';
     const res = await fetch(url).then(r => r.json());
-    if (res.current) {
+    if (res && res.current) {
       const temp = Math.round(res.current.temperature_2m);
-      const rain = res.current.precipitation;
-      const code = res.current.weather_code;
+      const rain = res.current.precipitation || 0;
+      const code = res.current.weather_code || 0;
       
-      let icon = '☀️';
-      if (rain > 0.05 || code >= 61) icon = '🌧️';
-      else if (code >= 45) icon = '🌫️';
-      else if (code >= 1 && code <= 3) icon = '⛅';
+      const nowHour = new Date().getHours();
+      const isNight = nowHour >= 21 || nowHour < 6;
 
-      document.getElementById('weather-icon').textContent = icon;
-      document.getElementById('weather-temp').textContent = `${temp}°F ${rain > 0 ? `(${rain}")` : ''}`;
+      let icon = isNight ? '🌙' : '☀️';
+      if (rain > 0.02 || code >= 61) icon = '🌧️';
+      else if (code >= 45) icon = '🌫️';
+      else if (code >= 1 && code <= 3) icon = isNight ? '☁️' : '⛅';
+
+      const iconEl = document.getElementById('weather-icon');
+      const tempEl = document.getElementById('weather-temp');
+
+      if (iconEl) iconEl.textContent = icon;
+      if (tempEl) tempEl.textContent = `${temp}°F${rain > 0 ? ` (${rain}")` : ''}`;
+      
       return { temp, rain, code };
     }
   } catch (e) {
