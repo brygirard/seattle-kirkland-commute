@@ -1,0 +1,20 @@
+[
+  {
+    "id": "snap_1785216388350",
+    "timestamp": 1785216388350,
+    "isoDate": "2026-07-28T05:26:28.350Z",
+    "dateStr": "7/27/2026",
+    "dayOfWeek": "Monday",
+    "dayIndex": 1,
+    "timeStr": "22:26",
+    "hour": 22,
+    "direction": "evening",
+    "sr520Time": 21,
+    "sr520Delay": 0,
+    "sr520Distance": "11.8",
+    "i90Time": 25,
+    "i90Delay": 0,
+    "i90Distance": "16.5",
+    "incidentsCount": 68
+  }
+]

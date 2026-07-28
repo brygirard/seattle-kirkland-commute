@@ -1,0 +1,35 @@
+name: 24/7 Commute Traffic Poller
+
+on:
+  schedule:
+    # Run every 5 minutes 24/7
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub UI
+
+jobs:
+  poll-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Traffic Poller
+        env:
+          TOMTOM_API_KEY: ${{ secrets.TOMTOM_API_KEY || 'QuSopbXau96swtFznGbYJV74BYwuZAML' }}
+        run: node .github/scripts/poll.js
+
+      - name: Commit and Push Updated History
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/commute_history.json
+          git status
+          git diff-index --quiet HEAD || (git commit -m "auto: update commute traffic log [skip ci]" && git push)
