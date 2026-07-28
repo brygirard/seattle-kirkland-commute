@@ -1,10 +1,8 @@
 name: 24/7 Commute Traffic Poller
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
-  repository_dispatch:
+  workflow_dispatch: # Allows manual trigger anytime from GitHub UI
+  repository_dispatch: # Triggered every 5 minutes by Cron-Job.org webhook
     types: [poll_traffic]
 
 jobs:
