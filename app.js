@@ -98,30 +98,42 @@ document.addEventListener('DOMContentLoaded', () => {
   startAutoRefresh();
 });
 
-// Fetch 24/7 cloud dataset & normalize
+// Fetch all monthly historical partitions via data/index.json
 async function syncCloudData() {
   try {
-    const cloudData = await fetch('data/commute_history.json').then(r => r.json());
-    if (Array.isArray(cloudData) && cloudData.length > 0) {
-      const localData = getHistoricalDatabase();
-      const localTimestamps = new Set(localData.map(d => d.timestamp));
-      
-      let mergedCount = 0;
-      cloudData.forEach(item => {
-        if (item.timestamp && !localTimestamps.has(item.timestamp)) {
-          localData.push(item);
-          localTimestamps.add(item.timestamp);
-          mergedCount++;
-        }
-      });
-
-      if (mergedCount > 0) {
-        localData.sort((a, b) => a.timestamp - b.timestamp);
-        localStorage.setItem('commute_historical_db', JSON.stringify(localData));
-        console.log(`[Cloud Sync] Synced ${mergedCount} new background cloud data points!`);
-        updateDataPointsCount();
-        updateTrendChart();
+    let filesToFetch = ['data/history_2026_07.json', 'data/commute_history.json'];
+    try {
+      const index = await fetch('data/index.json').then(r => r.json());
+      if (Array.isArray(index) && index.length > 0) {
+        filesToFetch = index.map(f => `data/${f}`);
       }
+    } catch (e) {}
+
+    const localData = getHistoricalDatabase();
+    const localTimestamps = new Set(localData.map(d => d.timestamp));
+    let mergedCount = 0;
+
+    for (const fileUrl of filesToFetch) {
+      try {
+        const cloudData = await fetch(fileUrl).then(r => r.json());
+        if (Array.isArray(cloudData)) {
+          cloudData.forEach(item => {
+            if (item.timestamp && !localTimestamps.has(item.timestamp)) {
+              localData.push(item);
+              localTimestamps.add(item.timestamp);
+              mergedCount++;
+            }
+          });
+        }
+      } catch (err) {}
+    }
+
+    if (mergedCount > 0) {
+      localData.sort((a, b) => a.timestamp - b.timestamp);
+      localStorage.setItem('commute_historical_db', JSON.stringify(localData));
+      console.log(`[Cloud Sync] Synced ${mergedCount} new data points from cloud archives!`);
+      updateDataPointsCount();
+      updateTrendChart();
     }
   } catch (err) {
     console.log('[Cloud Sync] Standalone / local mode:', err.message);

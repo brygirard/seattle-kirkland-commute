@@ -61,21 +61,32 @@ async function pollTraffic() {
 
   try {
     const [morningData, eveningData, weatherData, incidentRes] = await Promise.all([
-      fetchRouteData(seattleCoords, kirklandCoords), // Morning: Seattle -> Kirkland
-      fetchRouteData(kirklandCoords, seattleCoords), // Evening: Kirkland -> Seattle
-      fetchWeather(),                                // Open-Meteo Seattle weather
+      fetchRouteData(seattleCoords, kirklandCoords),
+      fetchRouteData(kirklandCoords, seattleCoords),
+      fetchWeather(),
       fetch(incidentUrl).then(r => r.json()).catch(() => ({ incidents: [] }))
     ]);
 
+    const now = new Date();
     const snapshot = {
-      timestamp: Date.now(),
+      timestamp: now.getTime(),
       morning: morningData,
       evening: eveningData,
       weather: weatherData,
       incidents: (incidentRes.incidents || []).length
     };
 
-    const filePath = path.join(__dirname, '..', '..', 'data', 'commute_history.json');
+    // Monthly Partitioning: NO sliding cap, NO data deletion!
+    const yearMonth = now.toISOString().slice(0, 7); // e.g. "2026-07"
+    const activeFileName = `history_${yearMonth}.json`;
+    const dataDir = path.join(__dirname, '..', '..', 'data');
+    const filePath = path.join(dataDir, activeFileName);
+    const indexPath = path.join(dataDir, 'index.json');
+
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
     let history = [];
     if (fs.existsSync(filePath)) {
       try {
@@ -85,12 +96,23 @@ async function pollTraffic() {
     }
 
     history.push(snapshot);
-    if (history.length > 10000) history.shift();
-
     fs.writeFileSync(filePath, JSON.stringify(history, null, 2), 'utf-8');
-    
-    const pDate = new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false });
-    console.log(`[Cloud Poller] ${pDate} PT | Temp:${weatherData.temp}°F Rain:${weatherData.rain}" | Morning 520:${morningData.sr520Time}m I90:${morningData.i90Time}m | Evening 520:${eveningData.sr520Time}m I90:${eveningData.i90Time}m`);
+
+    // Update master index file
+    let index = [];
+    if (fs.existsSync(indexPath)) {
+      try {
+        const rawIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+        if (Array.isArray(rawIndex)) index = rawIndex;
+      } catch (e) {}
+    }
+    if (!index.includes(activeFileName)) {
+      index.push(activeFileName);
+      fs.writeFileSync(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+    }
+
+    const pDate = now.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false });
+    console.log(`[Monthly Archiver] Saved snapshot to ${activeFileName} at ${pDate} PT (${history.length} records in ${activeFileName})`);
 
   } catch (err) {
     console.error('Error polling traffic in cloud script:', err);

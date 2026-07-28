@@ -30,6 +30,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/commute_history.json
+          git add data/
           git status
           git diff-index --quiet HEAD || (git commit -m "auto: update commute traffic log [skip ci]" && git push)
