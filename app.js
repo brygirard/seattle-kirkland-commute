@@ -7,8 +7,8 @@ const CONFIG = {
   destCoords: { lat: 47.6702148, lon: -122.1973175 },  // Google Kirkland
   direction: 'morning', // 'morning' = Seattle -> Kirkland, 'evening' = Kirkland -> Seattle
   refreshIntervalMs: parseInt(localStorage.getItem('tomtom_poll_interval') || '120000', 10), // Default 2 minutes
-  dailyQuotaLimit: parseInt(localStorage.getItem('tomtom_daily_limit') || '2000', 10),     // Safety guard (TomTom max 2,500/day)
-  minManualCooldownMs: 10000 // 10s cooldown for manual clicks
+  dailyQuotaLimit: parseInt(localStorage.getItem('tomtom_daily_limit') || '2000', 10),     // Safety guard
+  minManualCooldownMs: 10000
 };
 
 let appState = {
@@ -97,20 +97,19 @@ document.addEventListener('DOMContentLoaded', () => {
   startAutoRefresh();
 });
 
-// Fetch 24/7 cloud poller dataset from data/commute_history.json
+// Fetch 24/7 cloud dataset & normalize
 async function syncCloudData() {
   try {
     const cloudData = await fetch('data/commute_history.json').then(r => r.json());
     if (Array.isArray(cloudData) && cloudData.length > 0) {
       const localData = getHistoricalDatabase();
-      const localIds = new Set(localData.map(d => d.id || `${d.timestamp}`));
+      const localTimestamps = new Set(localData.map(d => d.timestamp));
       
       let mergedCount = 0;
       cloudData.forEach(item => {
-        const id = item.id || `${item.timestamp}`;
-        if (!localIds.has(id)) {
+        if (item.timestamp && !localTimestamps.has(item.timestamp)) {
           localData.push(item);
-          localIds.add(id);
+          localTimestamps.add(item.timestamp);
           mergedCount++;
         }
       });
@@ -124,7 +123,7 @@ async function syncCloudData() {
       }
     }
   } catch (err) {
-    console.log('[Cloud Sync] No cloud file or standalone mode:', err.message);
+    console.log('[Cloud Sync] Standalone / local mode:', err.message);
   }
 }
 
@@ -162,13 +161,11 @@ function checkAndIncrementQuota(calls = 1) {
   
   try {
     const stored = JSON.parse(localStorage.getItem('tomtom_daily_usage') || '{}');
-    if (stored.date === todayStr) {
-      usage = stored;
-    }
+    if (stored.date === todayStr) usage = stored;
   } catch (e) {}
 
   if (usage.count >= CONFIG.dailyQuotaLimit) {
-    console.warn(`[Quota Guard] Daily limit of ${CONFIG.dailyQuotaLimit} calls reached. Halting auto-calls.`);
+    console.warn(`[Quota Guard] Daily limit of ${CONFIG.dailyQuotaLimit} calls reached.`);
     return false;
   }
 
@@ -190,20 +187,16 @@ function updateQuotaBadge(currentCount) {
   }
 
   el.quotaText.textContent = `${currentCount} / ${CONFIG.dailyQuotaLimit} API Calls`;
-
   const ratio = currentCount / CONFIG.dailyQuotaLimit;
   el.quotaMeter.className = 'quota-badge';
-  if (ratio > 0.85) {
-    el.quotaMeter.classList.add('danger');
-  } else if (ratio > 0.5) {
-    el.quotaMeter.classList.add('warning');
-  }
+  if (ratio > 0.85) el.quotaMeter.classList.add('danger');
+  else if (ratio > 0.5) el.quotaMeter.classList.add('warning');
 }
 
-// --- Data Fetching with Rate & Quota Safety ---
+// --- Data Fetching ---
 async function loadCommuteData() {
   if (!checkAndIncrementQuota(1)) {
-    el.routesList.innerHTML = `<div class="no-incidents" style="color:var(--accent-red);">⚠️ Daily TomTom API safety limit reached (${CONFIG.dailyQuotaLimit} calls). Auto-refresh paused until tomorrow to prevent overages.</div>`;
+    el.routesList.innerHTML = `<div class="no-incidents" style="color:var(--accent-red);">⚠️ Daily TomTom API safety limit reached (${CONFIG.dailyQuotaLimit} calls). Auto-refresh paused until tomorrow.</div>`;
     return;
   }
 
@@ -243,7 +236,7 @@ async function loadCommuteData() {
 async function fetchIncidents() {
   try {
     const bbox = '-122.38,47.58,-122.15,47.72';
-    const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${CONFIG.apiKey}&bbox=${bbox}&fields={incidents{type,properties{iconCategory,magnitudeOfDelay,events{description},length,delay,roadNumbers}}}`;
+    const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${CONFIG.apiKey}&bbox=${bbox}&fields={incidents{type}}`;
     const res = await fetch(url).then(r => r.json());
     return res.incidents || [];
   } catch (e) {
@@ -512,27 +505,7 @@ function initChart() {
     type: 'line',
     data: {
       labels: [],
-      datasets: [
-        {
-          label: 'SR-520 (Toll)',
-          data: [],
-          borderColor: '#06b6d4',
-          backgroundColor: 'rgba(6, 182, 212, 0.1)',
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4
-        },
-        {
-          label: 'I-90',
-          data: [],
-          borderColor: '#8b5cf6',
-          backgroundColor: 'rgba(139, 92, 246, 0.05)',
-          tension: 0.4,
-          fill: false,
-          borderDash: [4, 4],
-          pointRadius: 4
-        }
-      ]
+      datasets: []
     },
     options: {
       responsive: true,
@@ -562,14 +535,43 @@ function initChart() {
   });
 }
 
+// Normalize entry for rendering
+function normalizeHistoryItem(item) {
+  const ts = item.timestamp || Date.now();
+  const d = new Date(ts);
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const options = { timeZone: 'America/Los_Angeles' };
+  
+  const dayOfWeek = d.toLocaleDateString('en-US', { ...options, weekday: 'long' });
+  const dayIndex = dayNames.indexOf(dayOfWeek);
+  const timeStr = d.toLocaleTimeString('en-US', { ...options, hour: '2-digit', minute: '2-digit', hour12: false });
+  const hour = parseInt(d.toLocaleTimeString('en-US', { ...options, hour: '2-digit', hour12: false }), 10) % 24;
+
+  const morning = item.morning || (item.direction === 'morning' ? { sr520Time: item.sr520Time || 0, sr520Delay: item.sr520Delay || 0, i90Time: item.i90Time || 0, i90Delay: item.i90Delay || 0 } : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 });
+  const evening = item.evening || (item.direction === 'evening' ? { sr520Time: item.sr520Time || 0, sr520Delay: item.sr520Delay || 0, i90Time: item.i90Time || 0, i90Delay: item.i90Delay || 0 } : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 });
+
+  return {
+    timestamp: ts,
+    dayOfWeek,
+    dayIndex,
+    timeStr,
+    hour,
+    morning,
+    evening,
+    incidents: item.incidents || item.incidentsCount || 0
+  };
+}
+
 function updateTrendChart() {
   if (!appState.trendChart) return;
 
-  const mode = appState.activeTrendWindow; // 'tomtomBaseline' | 'polledActual' | 'combinedOverlay'
-  const timeWindow = appState.selectedTimeWindow; // 'morning' | 'evening' | 'byDay'
+  const mode = appState.activeTrendWindow;
+  const timeWindow = appState.selectedTimeWindow;
   const dayFilter = appState.selectedDayFilter;
 
-  const history = getHistoricalDatabase();
+  const historyRaw = getHistoricalDatabase();
+  const history = historyRaw.map(normalizeHistoryItem);
+
   const filteredHistory = dayFilter === 'all' 
     ? history 
     : history.filter(h => String(h.dayIndex) === String(dayFilter));
@@ -577,7 +579,6 @@ function updateTrendChart() {
   let labels = [];
   let datasets = [];
 
-  // 1. Calculate TomTom Historical Baseline Curves
   let baselineSR520 = [];
   let baselineI90 = [];
 
@@ -600,7 +601,6 @@ function updateTrendChart() {
     baselineI90   = [31, 41, 42, 43, 33, 27, 26];
   }
 
-  // Build datasets based on active tab mode
   if (mode === 'tomtomBaseline') {
     datasets = [
       {
@@ -628,12 +628,13 @@ function updateTrendChart() {
   } else if (mode === 'polledActual') {
     if (filteredHistory.length > 0) {
       labels = filteredHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const actualSR520 = filteredHistory.map(s => s.sr520Time);
-      const actualI90 = filteredHistory.map(s => s.i90Time);
+      const isMorn = CONFIG.direction === 'morning';
+      const actualSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
+      const actualI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
 
       datasets = [
         {
-          label: 'Your Polled SR-520',
+          label: `Polled SR-520 (${CONFIG.direction})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -643,7 +644,7 @@ function updateTrendChart() {
           pointRadius: 5
         },
         {
-          label: 'Your Polled I-90',
+          label: `Polled I-90 (${CONFIG.direction})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
@@ -657,22 +658,15 @@ function updateTrendChart() {
     } else {
       labels = ['No Polled Points Yet'];
       datasets = [
-        {
-          label: 'Your Polled Live Data',
-          data: [0],
-          borderColor: '#10b981',
-          borderWidth: 2
-        }
+        { label: 'Your Polled Live Data', data: [0], borderColor: '#10b981', borderWidth: 2 }
       ];
     }
   } else if (mode === 'combinedOverlay') {
-    // Mode 3: Overlay Benchmark vs Actual
-    let actualSR520Mapped = [];
     if (filteredHistory.length > 0) {
-      // Map polled snapshots onto time labels or show full historical log
       labels = filteredHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const actualSR520 = filteredHistory.map(s => s.sr520Time);
-      const actualI90 = filteredHistory.map(s => s.i90Time);
+      const isMorn = CONFIG.direction === 'morning';
+      const actualSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
+      const actualI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
 
       datasets = [
         {
@@ -686,7 +680,7 @@ function updateTrendChart() {
           pointRadius: 2
         },
         {
-          label: 'Your Polled Actual SR-520',
+          label: `Actual SR-520 (${CONFIG.direction})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: '#10b981',
@@ -696,7 +690,7 @@ function updateTrendChart() {
           pointRadius: 5
         },
         {
-          label: 'Your Polled Actual I-90',
+          label: `Actual I-90 (${CONFIG.direction})`,
           data: actualI90,
           borderColor: '#f59e0b',
           borderWidth: 2,
@@ -707,20 +701,8 @@ function updateTrendChart() {
       ];
     } else {
       datasets = [
-        {
-          label: 'TomTom Historic SR-520',
-          data: baselineSR520,
-          borderColor: '#06b6d4',
-          borderWidth: 2,
-          tension: 0.4
-        },
-        {
-          label: 'TomTom Historic I-90',
-          data: baselineI90,
-          borderColor: '#8b5cf6',
-          borderWidth: 2,
-          tension: 0.4
-        }
+        { label: 'TomTom Historic SR-520', data: baselineSR520, borderColor: '#06b6d4', borderWidth: 2, tension: 0.4 },
+        { label: 'TomTom Historic I-90', data: baselineI90, borderColor: '#8b5cf6', borderWidth: 2, tension: 0.4 }
       ];
     }
   }
@@ -738,28 +720,19 @@ function saveLiveSnapshot() {
   const sr520 = appState.routes.find(r => r.name.includes('520')) || appState.routes[0];
   const i90 = appState.routes.find(r => r.name.includes('90')) || appState.routes[1] || sr520;
 
-  const now = new Date();
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayOfWeek = dayNames[now.getDay()];
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-
-  const snapshot = {
-    id: `snap_${now.getTime()}`,
-    timestamp: now.getTime(),
-    isoDate: now.toISOString(),
-    dateStr: now.toLocaleDateString(),
-    dayOfWeek,
-    dayIndex: now.getDay(),
-    timeStr,
-    hour: now.getHours(),
-    direction: CONFIG.direction,
+  const currentRouteData = {
     sr520Time: sr520.travelTimeMins,
     sr520Delay: sr520.delayMins,
-    sr520Distance: sr520.miles,
     i90Time: i90.travelTimeMins,
-    i90Delay: i90.delayMins,
-    i90Distance: i90.miles,
-    incidentsCount: appState.incidents.length
+    i90Delay: i90.delayMins
+  };
+
+  const now = Date.now();
+  const snapshot = {
+    timestamp: now,
+    morning: CONFIG.direction === 'morning' ? currentRouteData : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 },
+    evening: CONFIG.direction === 'evening' ? currentRouteData : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 },
+    incidents: appState.incidents.length
   };
 
   const history = getHistoricalDatabase();
@@ -781,19 +754,15 @@ function getHistoricalDatabase() {
 
 function updateDataPointsCount() {
   const history = getHistoricalDatabase();
-  el.dataPointsCount.textContent = `${history.length} Data Points Logged`;
+  el.dataPointsCount.textContent = `${history.length} Polled Points`;
 }
 
-// --- Tab Visibility Safety Handler ---
 function setupVisibilityHandler() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       appState.isTabVisible = false;
-      console.log('[Quota Guard] Tab backgrounded. Auto-refresh paused.');
     } else {
       appState.isTabVisible = true;
-      console.log('[Quota Guard] Tab focused. Resuming auto-refresh.');
-      
       const now = new Date();
       if (!appState.lastUpdated || (now - appState.lastUpdated) > CONFIG.refreshIntervalMs) {
         loadCommuteData();
@@ -802,27 +771,29 @@ function setupVisibilityHandler() {
   });
 }
 
-// --- Export & Import Functions ---
 function exportCSV() {
-  const history = getHistoricalDatabase();
-  if (history.length === 0) {
+  const rawHistory = getHistoricalDatabase();
+  if (rawHistory.length === 0) {
     alert('No logged traffic data points to export yet!');
     return;
   }
 
-  const headers = ['Timestamp', 'ISO_Date', 'Date', 'Day_of_Week', 'Time', 'Direction', 'SR520_TravelTime_Mins', 'SR520_Delay_Mins', 'I90_TravelTime_Mins', 'I90_Delay_Mins', 'Incidents_Count'];
+  const history = rawHistory.map(normalizeHistoryItem);
+  const headers = ['Timestamp', 'ISO_Date', 'Day_of_Week', 'Time', 'Morning_SR520_Time', 'Morning_SR520_Delay', 'Morning_I90_Time', 'Morning_I90_Delay', 'Evening_SR520_Time', 'Evening_SR520_Delay', 'Evening_I90_Time', 'Evening_I90_Delay', 'Incidents'];
   const rows = history.map(h => [
     h.timestamp,
-    h.isoDate,
-    h.dateStr,
+    new Date(h.timestamp).toISOString(),
     h.dayOfWeek,
     h.timeStr,
-    h.direction,
-    h.sr520Time,
-    h.sr520Delay,
-    h.i90Time,
-    h.i90Delay,
-    h.incidentsCount
+    h.morning.sr520Time,
+    h.morning.sr520Delay,
+    h.morning.i90Time,
+    h.morning.i90Delay,
+    h.evening.sr520Time,
+    h.evening.sr520Delay,
+    h.evening.i90Time,
+    h.evening.i90Delay,
+    h.incidents
   ]);
 
   const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -858,24 +829,6 @@ function importDataFile(file) {
       let imported = [];
       if (file.name.endsWith('.json')) {
         imported = JSON.parse(content);
-      } else if (file.name.endsWith('.csv')) {
-        const lines = content.split('\n').filter(l => l.trim());
-        imported = lines.slice(1).map(line => {
-          const vals = line.split(',');
-          return {
-            timestamp: parseInt(vals[0]),
-            isoDate: vals[1],
-            dateStr: vals[2],
-            dayOfWeek: vals[3],
-            timeStr: vals[4],
-            direction: vals[5],
-            sr520Time: parseInt(vals[6]),
-            sr520Delay: parseInt(vals[7]),
-            i90Time: parseInt(vals[8]),
-            i90Delay: parseInt(vals[9]),
-            incidentsCount: parseInt(vals[10])
-          };
-        });
       }
 
       if (Array.isArray(imported) && imported.length > 0) {
@@ -892,9 +845,7 @@ function importDataFile(file) {
   reader.readAsText(file);
 }
 
-// --- Event Listeners & Controls ---
 function setupEventListeners() {
-  // Throttled Manual Refresh Button
   el.btnRefresh.addEventListener('click', () => {
     const now = Date.now();
     if (now - appState.lastManualClickTime < CONFIG.minManualCooldownMs) {
@@ -1012,7 +963,6 @@ function startAutoRefresh() {
   
   if (CONFIG.refreshIntervalMs > 0) {
     appState.refreshTimer = setInterval(() => {
-      // Only auto-refresh if tab is visible to conserve quota!
       if (appState.isTabVisible) {
         loadCommuteData();
       }
