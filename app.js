@@ -257,12 +257,35 @@ async function fetchIncidents() {
   }
 }
 
+function getSR520TollRate(date = new Date()) {
+  const options = { timeZone: 'America/Los_Angeles' };
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayOfWeek = date.toLocaleDateString('en-US', { ...options, weekday: 'long' });
+  const isWeekend = dayOfWeek === 'Saturday' || dayOfWeek === 'Sunday';
+
+  const hourStr = date.toLocaleTimeString('en-US', { ...options, hour: '2-digit', hour12: false });
+  const hour = parseInt(hourStr, 10) % 24;
+
+  if (isWeekend) {
+    if (hour >= 11 && hour < 18) return 3.40;
+    if (hour >= 8 && hour < 21) return 2.40;
+    return 1.40;
+  }
+
+  if ((hour >= 7 && hour < 10) || (hour >= 15 && hour < 19)) return 4.90;
+  if ((hour >= 6 && hour < 7) || (hour >= 10 && hour < 15) || (hour >= 19 && hour < 21)) return 3.60;
+  if (hour >= 21 || hour < 6) return 1.40;
+
+  return 3.60;
+}
+
 function processRoutes(rawRoutes) {
   appState.routes = rawRoutes.map((route, idx) => {
-    const miles = (route.summary.lengthInMeters / 1609.34).toFixed(1);
+    const miles = parseFloat((route.summary.lengthInMeters / 1609.34).toFixed(1));
     const travelTimeMins = Math.round(route.summary.travelTimeInSeconds / 60);
     const delayMins = Math.round(route.summary.trafficDelayInSeconds / 60);
     const noTrafficMins = Math.round(route.summary.noTrafficTravelTimeInSeconds / 60);
+    const speedMph = travelTimeMins > 0 ? Math.round((miles / (travelTimeMins / 60))) : 0;
     
     let category = 'Alternate Route';
     let isToll = false;
@@ -289,6 +312,7 @@ function processRoutes(rawRoutes) {
       travelTimeMins,
       delayMins,
       noTrafficMins,
+      speedMph,
       isToll,
       summary: route.summary,
       instructions: route.guidance?.instructions || [],
@@ -335,11 +359,13 @@ function renderDashboard() {
 }
 
 function renderRouteCards() {
+  const currentToll = getSR520TollRate();
+
   el.routesList.innerHTML = appState.routes.map((route, i) => {
     const isActive = i === appState.selectedRouteIndex;
     const delayText = route.delayMins > 0 ? `+${route.delayMins} min delay` : 'No delay';
     const tollBadge = route.isToll 
-      ? `<span class="toll-pill toll">Toll</span>` 
+      ? `<span class="toll-pill toll">$${currentToll.toFixed(2)} Toll</span>` 
       : `<span class="toll-pill free">No Toll</span>`;
 
     return `
@@ -347,7 +373,7 @@ function renderRouteCards() {
         <div class="route-card-accent"></div>
         <div class="route-card-header">
           <span class="route-name">${route.name} ${tollBadge}</span>
-          <span class="route-distance">${route.miles} mi</span>
+          <span class="route-distance">${route.miles} mi (${route.speedMph} mph)</span>
         </div>
         <div class="route-card-body">
           <div class="route-metrics">
