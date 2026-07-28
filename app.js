@@ -1,13 +1,16 @@
 // --- App Configuration & State ---
+const rawInterval = parseInt(localStorage.getItem('tomtom_poll_interval') || '120000', 10);
+const rawLimit = parseInt(localStorage.getItem('tomtom_daily_limit') || '2000', 10);
+
 const CONFIG = {
-  apiKey: localStorage.getItem('tomtom_api_key') || 'QuSopbXau96swtFznGbYJV74BYwuZAML',
+  apiKey: (localStorage.getItem('tomtom_api_key') || 'QuSopbXau96swtFznGbYJV74BYwuZAML').trim(),
   originName: '225 Cedar St, Seattle, WA',
   originCoords: { lat: 47.6167589, lon: -122.3488781 }, // Belltown 225 Cedar St
   destName: 'Google Kirkland (747 6th St S)',
   destCoords: { lat: 47.6702148, lon: -122.1973175 },  // Google Kirkland
   direction: 'morning', // 'morning' = Seattle -> Kirkland, 'evening' = Kirkland -> Seattle
-  refreshIntervalMs: parseInt(localStorage.getItem('tomtom_poll_interval') || '120000', 10), // Default 2 minutes
-  dailyQuotaLimit: parseInt(localStorage.getItem('tomtom_daily_limit') || '2000', 10),     // Safety guard
+  refreshIntervalMs: isNaN(rawInterval) || rawInterval < 0 ? 120000 : rawInterval,
+  dailyQuotaLimit: isNaN(rawLimit) || rawLimit <= 0 ? 2000 : rawLimit,
   minManualCooldownMs: 10000
 };
 
@@ -100,49 +103,52 @@ document.addEventListener('DOMContentLoaded', () => {
 // Fetch all monthly historical partitions via data/index.json
 async function syncCloudData() {
   try {
-    let filesToFetch = ['data/history_2026_07.json', 'data/commute_history.json'];
+    let filesToFetch = ['data/history_2026-07.json', 'data/history_2026_07.json'];
     try {
-      const index = await fetch('data/index.json').then(r => r.json());
+      const index = await fetch('data/index.json').then(r => r.ok ? r.json() : []);
       if (Array.isArray(index) && index.length > 0) {
         filesToFetch = index.map(f => `data/${f}`);
       }
     } catch (e) {}
 
     const localData = getHistoricalDatabase();
-    const localTimestamps = new Set(localData.map(d => d.timestamp));
+    const localTimestamps = new Set(localData.map(d => d?.timestamp).filter(Boolean));
     let mergedCount = 0;
 
     for (const fileUrl of filesToFetch) {
       try {
-        const cloudData = await fetch(fileUrl).then(r => r.json());
-        if (Array.isArray(cloudData)) {
-          cloudData.forEach(item => {
-            if (item.timestamp && !localTimestamps.has(item.timestamp)) {
-              localData.push(item);
-              localTimestamps.add(item.timestamp);
-              mergedCount++;
-            }
-          });
+        const res = await fetch(fileUrl);
+        if (res.ok) {
+          const cloudData = await res.json();
+          if (Array.isArray(cloudData)) {
+            cloudData.forEach(item => {
+              if (item && item.timestamp && !localTimestamps.has(item.timestamp)) {
+                localData.push(item);
+                localTimestamps.add(item.timestamp);
+                mergedCount++;
+              }
+            });
+          }
         }
       } catch (err) {}
     }
 
     if (mergedCount > 0) {
-      localData.sort((a, b) => a.timestamp - b.timestamp);
+      localData.sort((a, b) => (a?.timestamp || 0) - (b?.timestamp || 0));
       localStorage.setItem('commute_historical_db', JSON.stringify(localData));
-      console.log(`[Cloud Sync] Synced ${mergedCount} new data points from cloud archives!`);
       updateDataPointsCount();
       updateTrendChart();
     }
-  } catch (err) {
-    console.log('[Cloud Sync] Standalone / local mode:', err.message);
-  }
+  } catch (err) {}
 }
 
 // --- Map Setup ---
 function initMap() {
   const centerLat = (CONFIG.originCoords.lat + CONFIG.destCoords.lat) / 2;
   const centerLon = (CONFIG.originCoords.lon + CONFIG.destCoords.lon) / 2;
+
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
 
   appState.map = L.map('map', {
     zoomControl: false
@@ -151,7 +157,7 @@ function initMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(appState.map);
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.tomtom.com">TomTom</a>',
+    attribution: '&copy; OpenStreetMap &copy; CARTO &copy; TomTom',
     subdomains: 'abcd',
     maxZoom: 19
   }).addTo(appState.map);
@@ -173,11 +179,10 @@ function checkAndIncrementQuota(calls = 1) {
   
   try {
     const stored = JSON.parse(localStorage.getItem('tomtom_daily_usage') || '{}');
-    if (stored.date === todayStr) usage = stored;
+    if (stored && stored.date === todayStr) usage = stored;
   } catch (e) {}
 
   if (usage.count >= CONFIG.dailyQuotaLimit) {
-    console.warn(`[Quota Guard] Daily limit of ${CONFIG.dailyQuotaLimit} calls reached.`);
     return false;
   }
 
@@ -192,29 +197,34 @@ function updateQuotaBadge(currentCount) {
     const todayStr = new Date().toISOString().slice(0, 10);
     try {
       const stored = JSON.parse(localStorage.getItem('tomtom_daily_usage') || '{}');
-      currentCount = (stored.date === todayStr) ? stored.count : 0;
+      currentCount = (stored && stored.date === todayStr) ? stored.count : 0;
     } catch (e) {
       currentCount = 0;
     }
   }
 
-  el.quotaText.textContent = `${currentCount} / ${CONFIG.dailyQuotaLimit} API Calls`;
+  if (el.quotaText) el.quotaText.textContent = `${currentCount} / ${CONFIG.dailyQuotaLimit} API Calls`;
   const ratio = currentCount / CONFIG.dailyQuotaLimit;
-  el.quotaMeter.className = 'quota-badge';
-  if (ratio > 0.85) el.quotaMeter.classList.add('danger');
-  else if (ratio > 0.5) el.quotaMeter.classList.add('warning');
+  if (el.quotaMeter) {
+    el.quotaMeter.className = 'quota-badge';
+    if (ratio > 0.85) el.quotaMeter.classList.add('danger');
+    else if (ratio > 0.5) el.quotaMeter.classList.add('warning');
+  }
 }
 
 // --- Data Fetching ---
 async function loadCommuteData() {
   if (!checkAndIncrementQuota(1)) {
-    el.routesList.innerHTML = `<div class="no-incidents" style="color:var(--accent-red);">⚠️ Daily TomTom API safety limit reached (${CONFIG.dailyQuotaLimit} calls). Auto-refresh paused until tomorrow.</div>`;
+    if (el.routesList) el.routesList.innerHTML = `<div class="no-incidents" style="color:var(--accent-red);">⚠️ Daily TomTom API safety limit reached (${CONFIG.dailyQuotaLimit} calls). Auto-refresh paused until tomorrow.</div>`;
     return;
   }
 
   try {
-    el.btnRefresh.querySelector('.spin-icon').classList.add('spinning');
-    el.routesList.innerHTML = `<div class="loading-skeleton">Fetching real-time TomTom traffic data...</div>`;
+    if (el.btnRefresh) {
+      const icon = el.btnRefresh.querySelector('.spin-icon');
+      if (icon) icon.classList.add('spinning');
+    }
+    if (el.routesList) el.routesList.innerHTML = `<div class="loading-skeleton">Fetching real-time TomTom traffic data...</div>`;
 
     const start = CONFIG.direction === 'morning' ? CONFIG.originCoords : CONFIG.destCoords;
     const end = CONFIG.direction === 'morning' ? CONFIG.destCoords : CONFIG.originCoords;
@@ -222,29 +232,32 @@ async function loadCommuteData() {
     const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${start.lat},${start.lon}:${end.lat},${end.lon}/json?key=${CONFIG.apiKey}&computeTravelTimeFor=all&traffic=true&maxAlternatives=2&instructionsType=text`;
     
     const [routeResponse, incidentsResponse, weatherData] = await Promise.all([
-      fetch(routeUrl).then(r => r.json()),
+      fetch(routeUrl).then(r => r.json()).catch(e => ({ errorText: e.message })),
       fetchIncidents(),
       fetchLiveWeather()
     ]);
 
     appState.currentWeather = weatherData;
 
-    if (routeResponse && routeResponse.routes && routeResponse.routes.length > 0) {
+    if (routeResponse && Array.isArray(routeResponse.routes) && routeResponse.routes.length > 0) {
       processRoutes(routeResponse.routes);
-      appState.incidents = incidentsResponse || [];
+      appState.incidents = Array.isArray(incidentsResponse) ? incidentsResponse : [];
       renderDashboard();
       saveLiveSnapshot();
     } else {
-      el.routesList.innerHTML = `<div class="no-incidents">Failed to calculate routes. Check TomTom API Key.</div>`;
+      const errDetail = routeResponse?.error?.description || routeResponse?.errorText || 'Check API Key';
+      if (el.routesList) el.routesList.innerHTML = `<div class="no-incidents">Failed to calculate routes: ${errDetail}</div>`;
     }
 
     appState.lastUpdated = new Date();
     updateRefreshTimestamp();
   } catch (err) {
-    console.error('Error loading commute data:', err);
-    el.routesList.innerHTML = `<div class="no-incidents">Error fetching traffic data: ${err.message}</div>`;
+    if (el.routesList) el.routesList.innerHTML = `<div class="no-incidents">Error fetching traffic data: ${err.message}</div>`;
   } finally {
-    el.btnRefresh.querySelector('.spin-icon').classList.remove('spinning');
+    if (el.btnRefresh) {
+      const icon = el.btnRefresh.querySelector('.spin-icon');
+      if (icon) icon.classList.remove('spinning');
+    }
   }
 }
 
@@ -553,7 +566,15 @@ function updateOptimalDepartureAdvisor() {
 }
 
 function initChart() {
-  const ctx = document.getElementById('trafficTrendChart').getContext('2d');
+  const canvas = document.getElementById('trafficTrendChart');
+  if (!canvas) return;
+
+  if (appState.trendChart) {
+    appState.trendChart.destroy();
+    appState.trendChart = null;
+  }
+
+  const ctx = canvas.getContext('2d');
   
   appState.trendChart = new Chart(ctx, {
     type: 'line',
@@ -975,8 +996,13 @@ function setupEventListeners() {
 
   el.recenterMap.addEventListener('click', () => {
     const selectedPolyline = appState.mapLayers.routePolylines[appState.selectedRouteIndex];
-    if (selectedPolyline) {
-      appState.map.fitBounds(selectedPolyline.getBounds(), { padding: [40, 40] });
+    if (selectedPolyline && appState.map) {
+      try {
+        const bounds = selectedPolyline.getBounds();
+        if (bounds && bounds.isValid()) {
+          appState.map.fitBounds(bounds, { padding: [40, 40] });
+        }
+      } catch (e) {}
     }
   });
 
