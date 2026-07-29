@@ -748,14 +748,14 @@ function initChart() {
   appState.eveningChart = createTrendChartInstance('eveningTrendChart');
 }
 
-function getTomTomBaselineForTime(hour, minute, isMorningWindow, dayFilter) {
+function getTomTomBaselineForTime(hour, minute, isSeattleToKirkland, dayFilter) {
   let mult = 1.0;
   if (dayFilter === '2' || dayFilter === '3' || dayFilter === '4') mult = 1.15;
   if (dayFilter === '1' || dayFilter === '5') mult = 0.88;
 
   const timeFloat = hour + (minute / 60);
 
-  if (isMorningWindow) {
+  if (isSeattleToKirkland) {
     let sr520 = 20;
     let i90 = 24;
     if (timeFloat >= 6 && timeFloat <= 10) {
@@ -777,14 +777,11 @@ function getTomTomBaselineForTime(hour, minute, isMorningWindow, dayFilter) {
   }
 }
 
-function aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow) {
-  const minHour = isMorningWindow ? 0 : 12;
-  const maxHour = isMorningWindow ? 12 : 24;
-
+function aggregateHistoryByTimeBucket(filteredHistory, isSeattleToKirkland) {
   const buckets = {};
 
   filteredHistory.forEach(item => {
-    if (item.hour >= minHour && item.hour < maxHour) {
+    if (item.hour >= 0 && item.hour < 24) {
       const parts = item.timeStr.split(':');
       const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
       const roundedMin = Math.floor(min / 5) * 5;
@@ -792,8 +789,8 @@ function aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow) {
 
       if (!buckets[key]) buckets[key] = { sr520: [], i90: [] };
 
-      const time520 = isMorningWindow ? item.morning?.sr520Time : item.evening?.sr520Time;
-      const timeI90 = isMorningWindow ? item.morning?.i90Time : item.evening?.i90Time;
+      const time520 = isSeattleToKirkland ? item.morning?.sr520Time : item.evening?.sr520Time;
+      const timeI90 = isSeattleToKirkland ? item.morning?.i90Time : item.evening?.i90Time;
 
       if (time520 > 5) buckets[key].sr520.push(time520);
       if (timeI90 > 5) buckets[key].i90.push(timeI90);
@@ -824,7 +821,7 @@ function aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow) {
   return { labels, rawSR520, rawI90, keys: sortedKeys };
 }
 
-function updateSingleChart(chartInstance, windowType) {
+function updateSingleChart(chartInstance, directionType) {
   if (!chartInstance) return;
 
   const mode = appState.activeTrendWindow;
@@ -836,53 +833,37 @@ function updateSingleChart(chartInstance, windowType) {
   const isSmooth = windowSize > 1;
   const lineTension = sliderVal === 0 ? 0.0 : 0.32 + (sliderVal * 0.03);
 
-  const isMorningWindow = windowType === 'morning';
+  const isSeattleToKirkland = (directionType === 'seattle_to_kirkland');
+  const dirLabel = isSeattleToKirkland ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
   const historyRaw = getHistoricalDatabase();
   const history = historyRaw.map(normalizeHistoryItem);
 
   let filteredHistory = history.filter(item => {
-    const m520 = item.morning?.sr520Time || 0;
-    const e520 = item.evening?.sr520Time || 0;
-    const mI90 = item.morning?.i90Time || 0;
-    const eI90 = item.evening?.i90Time || 0;
+    const s520 = isSeattleToKirkland ? (item.morning?.sr520Time || 0) : (item.evening?.sr520Time || 0);
+    const i90  = isSeattleToKirkland ? (item.morning?.i90Time || 0) : (item.evening?.i90Time || 0);
 
     if (dayFilter !== 'all' && String(item.dayIndex) !== String(dayFilter)) {
       return false;
     }
 
-    if (isMorningWindow) {
-      if (m520 <= 5 || mI90 <= 5) return false;
-      return item.hour >= 0 && item.hour < 12;
-    } else {
-      if (e520 <= 5 || eI90 <= 5) return false;
-      return item.hour >= 12 && item.hour < 24;
-    }
+    return s520 > 5 && i90 > 5 && item.hour >= 0 && item.hour < 24;
   });
 
   let labels = [];
   let datasets = [];
-  let baselineSR520 = [];
-  let baselineI90 = [];
-
-  let mult = 1.0;
-  if (dayFilter === '2' || dayFilter === '3' || dayFilter === '4') mult = 1.15;
-  if (dayFilter === '1' || dayFilter === '5') mult = 0.88;
-
-  if (isMorningWindow) {
-    labels = ['12:00 AM', '2:00 AM', '4:00 AM', '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM'];
-    baselineSR520 = [20, 20, 20, 21, 25, Math.round(32*mult), Math.round(36*mult), Math.round(31*mult), 26, 20];
-    baselineI90   = [24, 24, 25, 26, 30, Math.round(38*mult), Math.round(42*mult), Math.round(36*mult), 30, 25];
-  } else {
-    labels = ['12:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '9:00 PM', '11:00 PM', '12:00 AM'];
-    let eveMult = (dayFilter === '4' || dayFilter === '3') ? 1.18 : (dayFilter === '5' ? 0.90 : 1.0);
-    baselineSR520 = [21, 22, 24, 28, Math.round(35*eveMult), Math.round(38*eveMult), Math.round(36*eveMult), 24, 21, 20];
-    baselineI90   = [25, 26, 28, 32, Math.round(40*eveMult), Math.round(44*eveMult), Math.round(41*eveMult), 28, 25, 24];
-  }
-
-  const dirLabel = isMorningWindow ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
   if (mode === 'tomtomBaseline') {
+    const hours24 = [0, 2, 4, 6, 7, 8, 9, 10, 12, 14, 16, 17, 18, 19, 21, 23];
+    labels = hours24.map(h => {
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayH = (h % 12) || 12;
+      return `${displayH}:00 ${period}`;
+    });
+
+    const baselineSR520 = hours24.map(h => getTomTomBaselineForTime(h, 0, isSeattleToKirkland, dayFilter).sr520);
+    const baselineI90   = hours24.map(h => getTomTomBaselineForTime(h, 0, isSeattleToKirkland, dayFilter).i90);
+
     datasets = [
       {
         label: `TomTom Baseline SR-520 (${dirLabel})`,
@@ -909,7 +890,7 @@ function updateSingleChart(chartInstance, windowType) {
       }
     ];
   } else if (mode === 'polledActual') {
-    const agg = aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow);
+    const agg = aggregateHistoryByTimeBucket(filteredHistory, isSeattleToKirkland);
 
     if (agg.labels.length > 0) {
       labels = agg.labels;
@@ -950,7 +931,7 @@ function updateSingleChart(chartInstance, windowType) {
       ];
     }
   } else if (mode === 'combinedOverlay') {
-    const agg = aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow);
+    const agg = aggregateHistoryByTimeBucket(filteredHistory, isSeattleToKirkland);
 
     if (agg.labels.length > 0) {
       labels = agg.labels;
@@ -959,12 +940,12 @@ function updateSingleChart(chartInstance, windowType) {
 
       const baselineSR520Overlay = agg.keys.map(k => {
         const [h, m] = k.split(':').map(Number);
-        return getTomTomBaselineForTime(h, m, isMorningWindow, dayFilter).sr520;
+        return getTomTomBaselineForTime(h, m, isSeattleToKirkland, dayFilter).sr520;
       });
 
       const baselineI90Overlay = agg.keys.map(k => {
         const [h, m] = k.split(':').map(Number);
-        return getTomTomBaselineForTime(h, m, isMorningWindow, dayFilter).i90;
+        return getTomTomBaselineForTime(h, m, isSeattleToKirkland, dayFilter).i90;
       });
 
       const titleSuffix = dayFilter === 'all' ? 'All Days Avg' : 'Daily Avg';
@@ -1015,9 +996,15 @@ function updateSingleChart(chartInstance, windowType) {
         }
       ];
     } else {
-      labels = isMorningWindow 
-        ? ['12:00 AM', '2:00 AM', '4:00 AM', '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM']
-        : ['12:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '9:00 PM', '11:00 PM', '12:00 AM'];
+      const hours24 = [0, 2, 4, 6, 7, 8, 9, 10, 12, 14, 16, 17, 18, 19, 21, 23];
+      labels = hours24.map(h => {
+        const period = h >= 12 ? 'PM' : 'AM';
+        const displayH = (h % 12) || 12;
+        return `${displayH}:00 ${period}`;
+      });
+      const baselineSR520 = hours24.map(h => getTomTomBaselineForTime(h, 0, isSeattleToKirkland, dayFilter).sr520);
+      const baselineI90   = hours24.map(h => getTomTomBaselineForTime(h, 0, isSeattleToKirkland, dayFilter).i90);
+
       datasets = [
         {
           label: `TomTom Baseline SR-520 (${dirLabel})`,
@@ -1053,8 +1040,8 @@ function updateTrendChart() {
     initChart();
   }
 
-  updateSingleChart(appState.morningChart, 'morning');
-  updateSingleChart(appState.eveningChart, 'evening');
+  updateSingleChart(appState.morningChart, 'seattle_to_kirkland');
+  updateSingleChart(appState.eveningChart, 'kirkland_to_seattle');
   updateDataPointsCount();
 }
 
