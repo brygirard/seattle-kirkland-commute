@@ -30,6 +30,14 @@ function getSR520TollRate(date = new Date()) {
   return 3.60;
 }
 
+// Physical sanity validation for travel times
+function isValidRouteData(data) {
+  if (!data) return false;
+  if (!data.sr520Time || data.sr520Time < 18) return false;
+  if (!data.i90Time || data.i90Time < 20) return false;
+  return true;
+}
+
 async function fetchRouteData(start, end) {
   const routeUrl = `https://api.tomtom.com/routing/1/calculateRoute/${start.lat},${start.lon}:${end.lat},${end.lon}/json?key=${apiKey}&computeTravelTimeFor=all&traffic=true&maxAlternatives=2&instructionsType=text`;
   const res = await fetch(routeUrl).then(r => r.json());
@@ -65,6 +73,25 @@ async function fetchRouteData(start, end) {
   };
 }
 
+// Retry wrapper with 3 retries and exponential backoff
+async function fetchRouteDataWithRetry(start, end, dirLabel, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const data = await fetchRouteData(start, end);
+      if (isValidRouteData(data)) {
+        return data;
+      }
+      console.warn(`[Poller Warning] ${dirLabel} attempt ${attempt}/${maxRetries} returned suspicious travel times (SR520=${data?.sr520Time}m, I90=${data?.i90Time}m). Retrying...`);
+    } catch (err) {
+      console.warn(`[Poller Warning] ${dirLabel} attempt ${attempt}/${maxRetries} failed: ${err.message}. Retrying...`);
+    }
+    if (attempt < maxRetries) {
+      await new Promise(r => setTimeout(r, 2000 * attempt));
+    }
+  }
+  return null;
+}
+
 async function fetchWeather() {
   try {
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=47.6167&longitude=-122.3489&current=temperature_2m,precipitation,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch';
@@ -91,11 +118,17 @@ async function pollTraffic() {
     const tollRate = getSR520TollRate(now);
 
     const [morningData, eveningData, weatherData, incidentRes] = await Promise.all([
-      fetchRouteData(seattleCoords, kirklandCoords), // Morning: Seattle -> Kirkland
-      fetchRouteData(kirklandCoords, seattleCoords), // Evening: Kirkland -> Seattle
+      fetchRouteDataWithRetry(seattleCoords, kirklandCoords, 'Morning (Seattle->Kirkland)'),
+      fetchRouteDataWithRetry(kirklandCoords, seattleCoords, 'Evening (Kirkland->Seattle)'),
       fetchWeather(),
       fetch(incidentUrl).then(r => r.json()).catch(() => ({ incidents: [] }))
     ]);
+
+    // REJECT BAD SNAPSHOTS AT CRON LEVEL: Skip write if after 3 retries data is still invalid
+    if (!isValidRouteData(morningData) || !isValidRouteData(eveningData)) {
+      console.error('[Cloud Poller REJECTED] Snapshot failed validation after 3 retries (SR520 < 18m or I90 < 20m). Skipping write to avoid dataset contamination.');
+      process.exit(0);
+    }
 
     const snapshot = {
       timestamp: now.getTime(),
@@ -140,7 +173,7 @@ async function pollTraffic() {
     }
 
     const pDate = now.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false });
-    console.log(`[Cloud Poller] ${pDate} PT | Toll:$${tollRate.toFixed(2)} | 520 Speed:${morningData.sr520SpeedMph}mph | I90 Speed:${morningData.i90SpeedMph}mph`);
+    console.log(`[Cloud Poller LOGGED] ${pDate} PT | Toll:$${tollRate.toFixed(2)} | Morning 520:${morningData.sr520Time}m | Evening 520:${eveningData.sr520Time}m`);
 
   } catch (err) {
     console.error('Error polling traffic in cloud script:', err);
