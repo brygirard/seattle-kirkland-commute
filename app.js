@@ -630,17 +630,34 @@ function initChart() {
   });
 }
 
-// Normalize entry for rendering
+// Normalize entry for rendering using robust Intl.DateTimeFormat
 function normalizeHistoryItem(item) {
   const ts = item.timestamp || Date.now();
   const d = new Date(ts);
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const options = { timeZone: 'America/Los_Angeles' };
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  });
   
-  const dayOfWeek = d.toLocaleDateString('en-US', { ...options, weekday: 'long' });
+  const parts = formatter.formatToParts(d);
+  let dayOfWeek = 'Monday';
+  let hourStr = '00';
+  let minStr = '00';
+
+  parts.forEach(p => {
+    if (p.type === 'weekday') dayOfWeek = p.value;
+    if (p.type === 'hour') hourStr = p.value;
+    if (p.type === 'minute') minStr = p.value;
+  });
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayIndex = dayNames.indexOf(dayOfWeek);
-  const timeStr = d.toLocaleTimeString('en-US', { ...options, hour: '2-digit', minute: '2-digit', hour12: false });
-  const hour = parseInt(d.toLocaleTimeString('en-US', { ...options, hour: '2-digit', hour12: false }), 10) % 24;
+  const hour = parseInt(hourStr, 10) % 24;
+  const timeStr = `${hourStr.padStart(2, '0')}:${minStr.padStart(2, '0')}`;
 
   const morning = item.morning || (item.direction === 'morning' ? { sr520Time: item.sr520Time || 0, sr520Delay: item.sr520Delay || 0, i90Time: item.i90Time || 0, i90Delay: item.i90Delay || 0 } : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 });
   const evening = item.evening || (item.direction === 'evening' ? { sr520Time: item.sr520Time || 0, sr520Delay: item.sr520Delay || 0, i90Time: item.i90Time || 0, i90Delay: item.i90Delay || 0 } : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 });
