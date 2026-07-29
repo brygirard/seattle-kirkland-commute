@@ -152,10 +152,12 @@
                 <option value="0">Sundays</option>
               </select>
 
-              <label class="checkbox-label" style="margin-left: 12px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Smooth out raw 5-minute traffic spikes using a rolling moving average curve">
-                <input type="checkbox" id="toggle-smooth-data" checked>
-                <span>Smooth Curve</span>
-              </label>
+              <div class="slider-control-group" style="margin-left: 12px; display: flex; align-items: center; gap: 8px;">
+                <label for="smoothing-slider" style="font-size: 0.8rem; font-weight: 500; color: var(--text-muted);">
+                  Curve Smoothing: <span id="smoothing-level-text" style="color: var(--accent-cyan); font-weight: 600;">Moderate (5 pts)</span>
+                </label>
+                <input type="range" id="smoothing-slider" min="0" max="5" step="1" value="2" class="range-slider" style="width: 110px; cursor: pointer;">
+              </div>
               <span class="data-points-badge" id="data-points-count">0 Polled Points</span>
             </div>
           </div>

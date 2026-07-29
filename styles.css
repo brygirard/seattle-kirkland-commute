@@ -1046,6 +1046,24 @@ body {
   border-color: var(--primary);
 }
 
+.range-slider {
+  accent-color: var(--accent-cyan);
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.range-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+
 .help-text {
   font-size: 0.75rem;
   color: var(--text-dim);

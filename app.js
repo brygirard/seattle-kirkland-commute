@@ -752,7 +752,13 @@ function updateSingleChart(chartInstance, windowType) {
 
   const mode = appState.activeTrendWindow;
   const dayFilter = appState.selectedDayFilter;
-  const isSmooth = document.getElementById('toggle-smooth-data')?.checked ?? true;
+  
+  const sliderVal = parseInt(document.getElementById('smoothing-slider')?.value ?? '2', 10);
+  const windowSizes = [1, 3, 5, 7, 9, 11];
+  const windowSize = windowSizes[sliderVal] ?? 5;
+  const isSmooth = windowSize > 1;
+  const lineTension = sliderVal === 0 ? 0.0 : 0.32 + (sliderVal * 0.03);
+
   const isMorningWindow = windowType === 'morning';
 
   const historyRaw = getHistoricalDatabase();
@@ -770,10 +776,10 @@ function updateSingleChart(chartInstance, windowType) {
 
     if (isMorningWindow) {
       if (m520 <= 5 || mI90 <= 5) return false;
-      return item.hour >= 0 && item.hour < 12; // 12:00 AM to 11:59 AM
+      return item.hour >= 0 && item.hour < 12;
     } else {
       if (e520 <= 5 || eI90 <= 5) return false;
-      return item.hour >= 12 && item.hour < 24; // 12:00 PM to 11:59 PM
+      return item.hour >= 12 && item.hour < 24;
     }
   });
 
@@ -803,23 +809,23 @@ function updateSingleChart(chartInstance, windowType) {
     datasets = [
       {
         label: `TomTom Baseline SR-520 (${dirLabel})`,
-        data: isSmooth ? applyMovingAverage(baselineSR520) : baselineSR520,
+        data: isSmooth ? applyMovingAverage(baselineSR520, windowSize) : baselineSR520,
         borderColor: '#06b6d4',
         backgroundColor: 'rgba(6, 182, 212, 0.12)',
         borderWidth: 2,
-        tension: 0.45,
+        tension: lineTension,
         cubicInterpolationMode: 'monotone',
         fill: true,
         pointRadius: 3
       },
       {
         label: `TomTom Baseline I-90 (${dirLabel})`,
-        data: isSmooth ? applyMovingAverage(baselineI90) : baselineI90,
+        data: isSmooth ? applyMovingAverage(baselineI90, windowSize) : baselineI90,
         borderColor: '#8b5cf6',
         backgroundColor: 'rgba(139, 92, 246, 0.05)',
         borderWidth: 2,
         borderDash: [4, 4],
-        tension: 0.45,
+        tension: lineTension,
         cubicInterpolationMode: 'monotone',
         fill: false,
         pointRadius: 3
@@ -840,29 +846,29 @@ function updateSingleChart(chartInstance, windowType) {
       const rawSR520 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.sr520Time : s.evening.sr520Time);
       const rawI90 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.i90Time : s.evening.i90Time);
 
-      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
-      const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
+      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, windowSize) : rawSR520;
+      const actualI90 = isSmooth ? applyMovingAverage(rawI90, windowSize) : rawI90;
 
       datasets = [
         {
-          label: `Polled SR-520 (${dirLabel}${isSmooth ? ' - Smoothed' : ''})`,
+          label: `Polled SR-520 (${dirLabel})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           borderWidth: 3,
-          tension: 0.4,
+          tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: true,
           pointRadius: deduplicatedHistory.length > 50 ? 1.5 : 3
         },
         {
-          label: `Polled I-90 (${dirLabel}${isSmooth ? ' - Smoothed' : ''})`,
+          label: `Polled I-90 (${dirLabel})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
           borderWidth: 2.5,
           borderDash: [3, 3],
-          tension: 0.4,
+          tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: false,
           pointRadius: deduplicatedHistory.length > 50 ? 1.5 : 3
@@ -1110,6 +1116,23 @@ function importDataFile(file) {
   reader.readAsText(file);
 }
 
+function updateSmoothingLabel() {
+  const slider = document.getElementById('smoothing-slider');
+  const label = document.getElementById('smoothing-level-text');
+  if (!slider || !label) return;
+
+  const val = parseInt(slider.value, 10);
+  const labels = [
+    'Off (Raw Data)',
+    'Subtle (3 pts)',
+    'Moderate (5 pts)',
+    'Medium (7 pts)',
+    'Smooth (9 pts)',
+    'Ultra (11 pts)'
+  ];
+  label.textContent = labels[val] || 'Moderate (5 pts)';
+}
+
 function setupEventListeners() {
   el.btnRefresh?.addEventListener('click', () => {
     const now = Date.now();
@@ -1188,16 +1211,12 @@ function setupEventListeners() {
     });
   }
 
-  if (el.filterDayOfWeek) {
-    el.filterDayOfWeek.addEventListener('change', (e) => {
-      appState.selectedDayFilter = e.target.value;
+  const smoothingSlider = document.getElementById('smoothing-slider');
+  if (smoothingSlider) {
+    smoothingSlider.addEventListener('input', () => {
+      updateSmoothingLabel();
       updateTrendChart();
     });
-  }
-
-  const smoothToggle = document.getElementById('toggle-smooth-data');
-  if (smoothToggle) {
-    smoothToggle.addEventListener('change', () => updateTrendChart());
   }
 
   el.btnExportCsv?.addEventListener('click', exportCSV);
