@@ -1119,34 +1119,52 @@ function setupEventListeners() {
     });
   });
 
-  el.filterTimeWindow.addEventListener('change', (e) => {
-    appState.selectedTimeWindow = e.target.value;
-    updateTrendChart();
-  });
+  if (el.filterTimeWindow) {
+    el.filterTimeWindow.addEventListener('change', (e) => {
+      appState.selectedTimeWindow = e.target.value;
+      updateTrendChart();
+    });
+  }
 
-  el.filterDayOfWeek.addEventListener('change', (e) => {
-    appState.selectedDayFilter = e.target.value;
-    updateTrendChart();
-  });
+  if (el.filterDayOfWeek) {
+    el.filterDayOfWeek.addEventListener('change', (e) => {
+      appState.selectedDayFilter = e.target.value;
+      updateTrendChart();
+    });
+  }
 
   const smoothToggle = document.getElementById('toggle-smooth-data');
   if (smoothToggle) {
     smoothToggle.addEventListener('change', () => updateTrendChart());
   }
 
-  el.btnExportCsv.addEventListener('click', exportCSV);
-  el.btnExportJson.addEventListener('click', exportJSON);
-  el.fileImport.addEventListener('change', (e) => importDataFile(e.target.files[0]));
+  el.btnExportCsv?.addEventListener('click', exportCSV);
+  el.btnExportJson?.addEventListener('click', exportJSON);
+  el.fileImport?.addEventListener('change', (e) => importDataFile(e.target.files[0]));
 
-  el.btnSettings.addEventListener('click', () => {
-    el.apiKeyInput.value = CONFIG.apiKey;
-    el.pollIntervalSelect.value = String(CONFIG.refreshIntervalMs);
-    el.dailyLimitInput.value = CONFIG.dailyQuotaLimit;
-    el.settingsModal.classList.remove('hidden');
+  el.btnSettings?.addEventListener('click', () => {
+    if (el.apiKeyInput) el.apiKeyInput.value = CONFIG.apiKey;
+    if (el.pollIntervalSelect) el.pollIntervalSelect.value = String(CONFIG.refreshIntervalMs);
+    if (el.dailyLimitInput) el.dailyLimitInput.value = CONFIG.dailyQuotaLimit;
+    el.settingsModal?.classList.remove('hidden');
   });
 
-  el.closeModal.addEventListener('click', () => {
-    el.settingsModal.classList.add('hidden');
+  el.closeModal?.addEventListener('click', () => {
+    el.settingsModal?.classList.add('hidden');
+  });
+
+  el.btnSaveSettings?.addEventListener('click', () => {
+    if (el.apiKeyInput) CONFIG.apiKey = el.apiKeyInput.value.trim();
+    if (el.pollIntervalSelect) CONFIG.refreshIntervalMs = parseInt(el.pollIntervalSelect.value, 10);
+    if (el.dailyLimitInput) CONFIG.dailyQuotaLimit = parseInt(el.dailyLimitInput.value, 10);
+
+    localStorage.setItem('commute_api_key', CONFIG.apiKey);
+    localStorage.setItem('commute_poll_interval', CONFIG.refreshIntervalMs);
+    localStorage.setItem('commute_daily_limit', CONFIG.dailyQuotaLimit);
+
+    el.settingsModal?.classList.add('hidden');
+    startAutoRefresh();
+    loadCommuteData();
   });
 
   el.btnSaveSettings.addEventListener('click', () => {
