@@ -740,18 +740,30 @@ function updateTrendChart() {
       }
     ];
   } else if (mode === 'polledActual') {
-    if (filteredHistory.length > 0) {
-      labels = filteredHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const isMorn = CONFIG.direction === 'morning';
-      const rawSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
-      const rawI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+    // Deduplicate points within 2 minutes of each other to keep X-axis labels un-clustered
+    const deduplicatedHistory = [];
+    let lastTime = 0;
+    filteredHistory.forEach(s => {
+      if (s.timestamp - lastTime >= 120000) {
+        deduplicatedHistory.push(s);
+        lastTime = s.timestamp;
+      }
+    });
+
+    if (deduplicatedHistory.length > 0) {
+      labels = deduplicatedHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
+      const isMorn = timeWindow === 'morning' ? true : (timeWindow === 'evening' ? false : (CONFIG.direction === 'morning'));
+      const rawSR520 = deduplicatedHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
+      const rawI90 = deduplicatedHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
 
       const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
       const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
 
+      const dirLabel = isMorn ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
+
       datasets = [
         {
-          label: `Polled SR-520 (${CONFIG.direction}${isSmooth ? ' - Smoothed' : ''})`,
+          label: `Polled SR-520 (${dirLabel}${isSmooth ? ' - Smoothed' : ''})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -759,10 +771,10 @@ function updateTrendChart() {
           tension: 0.4,
           cubicInterpolationMode: 'monotone',
           fill: true,
-          pointRadius: filteredHistory.length > 50 ? 1.5 : 3
+          pointRadius: deduplicatedHistory.length > 50 ? 1.5 : 3
         },
         {
-          label: `Polled I-90 (${CONFIG.direction}${isSmooth ? ' - Smoothed' : ''})`,
+          label: `Polled I-90 (${dirLabel}${isSmooth ? ' - Smoothed' : ''})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
@@ -771,7 +783,7 @@ function updateTrendChart() {
           tension: 0.4,
           cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: filteredHistory.length > 50 ? 1.5 : 3
+          pointRadius: deduplicatedHistory.length > 50 ? 1.5 : 3
         }
       ];
     } else {
@@ -781,14 +793,25 @@ function updateTrendChart() {
       ];
     }
   } else if (mode === 'combinedOverlay') {
-    if (filteredHistory.length > 0) {
-      labels = filteredHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const isMorn = CONFIG.direction === 'morning';
-      const rawSR520 = filteredHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
-      const rawI90 = filteredHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+    const deduplicatedHistory = [];
+    let lastTime = 0;
+    filteredHistory.forEach(s => {
+      if (s.timestamp - lastTime >= 120000) {
+        deduplicatedHistory.push(s);
+        lastTime = s.timestamp;
+      }
+    });
+
+    if (deduplicatedHistory.length > 0) {
+      labels = deduplicatedHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
+      const isMorn = timeWindow === 'morning' ? true : (timeWindow === 'evening' ? false : (CONFIG.direction === 'morning'));
+      const rawSR520 = deduplicatedHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
+      const rawI90 = deduplicatedHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
 
       const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
       const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
+
+      const dirLabel = isMorn ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
       datasets = [
         {
@@ -802,7 +825,7 @@ function updateTrendChart() {
           pointRadius: 0
         },
         {
-          label: `Polled Actual SR-520${isSmooth ? ' (Smoothed)' : ''}`,
+          label: `Polled Actual SR-520 (${dirLabel})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -813,7 +836,7 @@ function updateTrendChart() {
           pointRadius: 3
         },
         {
-          label: `Polled Actual I-90${isSmooth ? ' (Smoothed)' : ''}`,
+          label: `Polled Actual I-90 (${dirLabel})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
