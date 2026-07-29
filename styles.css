@@ -226,33 +226,88 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* --- MAIN LAYOUT --- */
-.main-content {
-  display: grid;
-  grid-template-columns: 420px 1fr;
-  flex: 1;
-  overflow: hidden;
+/* --- MAIN LAYOUT FLOW --- */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--bg-main);
 }
 
-/* --- SIDEBAR --- */
-.sidebar {
-  background-color: var(--bg-panel);
-  border-right: 1px solid var(--border-color);
-  overflow-y: auto;
-  padding: 20px;
+.main-content-flow {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* --- TOP HORIZONTAL BAR --- */
+.top-horizontal-bar {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.stats-grid-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.routes-container-horizontal {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+/* --- HERO CHART SECTION --- */
+.hero-chart-section {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   box-shadow: var(--shadow-lg);
 }
 
-.sidebar::-webkit-scrollbar {
-  width: 6px;
+.hero-chart-container {
+  position: relative;
+  height: 480px;
+  width: 100%;
+  margin-top: 16px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+/* --- BOTTOM SECTION (MAP & INCIDENTS) --- */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.side-info-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.map-section {
+  position: relative;
+  height: 420px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
 }
 
 /* --- STATS GRID --- */
@@ -990,13 +1045,14 @@ body {
 }
 
 /* --- RESPONSIVE BREAKPOINTS --- */
-@media (max-width: 960px) {
-  .main-content {
+@media (max-width: 1024px) {
+  .top-horizontal-bar {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 450px;
   }
-  .sidebar {
-    height: auto;
-    max-height: 55vh;
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero-chart-container {
+    height: 380px;
   }
 }

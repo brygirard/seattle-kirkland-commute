@@ -11,38 +11,29 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS for Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   
   <!-- Chart.js for Traffic Trends -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Custom Styles -->
+  <!-- App Custom CSS -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app-container">
     
-    <!-- Header -->
-    <header class="app-header">
+    <!-- Top Header -->
+    <header class="top-header">
       <div class="header-left">
-        <div class="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
-            <circle cx="7" cy="17" r="2"></circle>
-            <path d="M9 17h6"></path>
-            <circle cx="17" cy="17" r="2"></circle>
-          </svg>
+        <div class="logo-badge">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 3C2.1 11.2 2 11.6 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
         </div>
-        <div class="header-title-group">
-          <h1>Seattle ↔ Kirkland Commute Optimizer</h1>
-          <p class="subtitle">
-            <span id="route-start-label">225 Cedar St, Seattle</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            <span id="route-end-label">Google Kirkland (747 6th St S)</span>
-          </p>
+        <div>
+          <h1>Seattle ↔ Kirkland Commute</h1>
+          <p class="subtitle" id="commute-route-subtitle">225 Cedar St, Seattle ➔ Google Kirkland (747 6th St S)</p>
         </div>
       </div>
 
@@ -81,14 +72,13 @@
       </div>
     </header>
 
-    <!-- Main Content Grid -->
-    <main class="main-content">
+    <!-- Main Layout Container -->
+    <main class="main-content-flow">
       
-      <!-- Sidebar / Dashboard Controls -->
-      <aside class="sidebar">
-        
+      <!-- TOP HORIZONTAL BAR: Live Metrics & Route Comparison -->
+      <section class="top-horizontal-bar">
         <!-- Summary Stat Cards -->
-        <section class="stats-grid">
+        <div class="stats-grid-row">
           <div class="stat-card primary">
             <div class="stat-header">
               <span class="stat-label">Fastest Travel Time</span>
@@ -121,35 +111,27 @@
             <div class="stat-value-sm" id="val-recommended-route">SR-520 Bridge</div>
             <div class="stat-subtext" id="val-distance">-- miles</div>
           </div>
-        </section>
+        </div>
 
-        <!-- Route Comparison: SR-520 vs I-90 vs Alternatives -->
-        <section class="card-section">
-          <div class="section-title">
-            <h2>Bridge Route Comparison</h2>
-            <span class="badge info">Real-time Comparison</span>
-          </div>
+        <!-- Horizontal Route Cards List -->
+        <div class="routes-container-horizontal" id="routes-list">
+          <div class="loading-skeleton">Calculating routes from TomTom...</div>
+        </div>
+      </section>
 
-          <div class="routes-container" id="routes-list">
-            <!-- Dynamically populated route cards for SR-520 vs I-90 vs Mercer -->
-            <div class="loading-skeleton">Calculating routes from TomTom...</div>
-          </div>
-        </section>
-
-        <!-- Optimal Time to Leave & Traffic Trends -->
-        <section class="card-section">
-          <div class="section-title">
-            <h2>Optimal Departure Time & Trends</h2>
-            <span class="badge spark">Smart Advisor</span>
-          </div>
-          
-          <div class="trend-advisor-card">
-            <div class="advisor-header">
-              <div class="advisor-icon">💡</div>
-              <div class="advisor-body">
-                <h4 id="optimal-time-heading">Best Departure Window</h4>
-                <p id="optimal-time-text">Analyzing traffic patterns...</p>
-              </div>
+      <!-- HERO FEATURE: Main Large Trend Graph Section -->
+      <section class="hero-chart-section card-section">
+        <div class="section-title">
+          <h2>Optimal Departure Time & Traffic Trends</h2>
+          <span class="badge spark">Primary Feature</span>
+        </div>
+        
+        <div class="trend-advisor-card">
+          <div class="advisor-header">
+            <div class="advisor-icon">💡</div>
+            <div class="advisor-body">
+              <h4 id="optimal-time-heading">Best Departure Window</h4>
+              <p id="optimal-time-text">Analyzing traffic patterns...</p>
             </div>
 
             <!-- Tab Switcher for Data Separation -->
@@ -158,157 +140,158 @@
               <button class="trend-tab" data-window="polledActual">Polled Actual</button>
               <button class="trend-tab" data-window="combinedOverlay">Overlay View</button>
             </div>
+          </div>
 
-            <!-- Granular Filter Bar -->
-            <div class="day-filter-bar" id="day-filter-bar">
-              <div class="filter-row">
-                <label for="filter-time-window">Time Window:</label>
-                <select id="filter-time-window" class="select-input flex-1">
-                  <option value="morning">Morning Rush (6:00 AM - 10:00 AM)</option>
-                  <option value="evening">Evening Rush (3:00 PM - 7:00 PM)</option>
-                  <option value="byDay">Full Week Profile (Mon-Sun)</option>
-                </select>
-              </div>
-
-              <div class="filter-row">
-                <label for="filter-day-of-week">Day:</label>
-                <select id="filter-day-of-week" class="select-input">
-                  <option value="all">All Days Combined</option>
-                  <option value="1">Mondays</option>
-                  <option value="2">Tuesdays</option>
-                  <option value="3">Wednesdays</option>
-                  <option value="4">Thursdays</option>
-                  <option value="5">Fridays</option>
-                  <option value="6">Saturdays</option>
-                  <option value="0">Sundays</option>
-                </select>
-
-                <label class="checkbox-label" style="margin-left: 8px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Smooth out raw 5-minute traffic spikes using a rolling moving average curve">
-                  <input type="checkbox" id="toggle-smooth-data" checked>
-                  <span>Smooth Curve</span>
-                </label>
-                <span class="data-points-badge" id="data-points-count">0 Polled Points</span>
-              </div>
+          <!-- Granular Filter Bar -->
+          <div class="day-filter-bar" id="day-filter-bar">
+            <div class="filter-row">
+              <label for="filter-time-window">Time Window:</label>
+              <select id="filter-time-window" class="select-input flex-1">
+                <option value="morning">Morning Rush (6:00 AM - 10:00 AM)</option>
+                <option value="evening">Evening Rush (3:00 PM - 7:00 PM)</option>
+                <option value="byDay">Full Week Profile (Mon-Sun)</option>
+              </select>
             </div>
 
-            <!-- Chart Canvas -->
-            <div class="chart-container">
-              <canvas id="trafficTrendChart"></canvas>
-            </div>
-            
-            <div class="chart-legend-custom">
-              <span class="legend-item"><span class="color-dot sr520"></span> SR-520 (Toll)</span>
-              <span class="legend-item"><span class="color-dot i90"></span> I-90</span>
-              <span class="legend-item"><span class="color-dot live"></span> Live Polled Snapshots</span>
-            </div>
+            <div class="filter-row">
+              <label for="filter-day-of-week">Day:</label>
+              <select id="filter-day-of-week" class="select-input">
+                <option value="all">All Days Combined</option>
+                <option value="1">Mondays</option>
+                <option value="2">Tuesdays</option>
+                <option value="3">Wednesdays</option>
+                <option value="4">Thursdays</option>
+                <option value="5">Fridays</option>
+                <option value="6">Saturdays</option>
+                <option value="0">Sundays</option>
+              </select>
 
-            <!-- Export / Import Dataset Toolbar -->
-            <div class="data-toolbar">
-              <button id="btn-export-csv" class="btn btn-secondary btn-sm" title="Export all logged data to CSV">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                Export CSV
-              </button>
-              <button id="btn-export-json" class="btn btn-secondary btn-sm" title="Export all logged data to JSON">Export JSON</button>
-              <label class="btn btn-secondary btn-sm" title="Import past traffic log">
-                Import
-                <input type="file" id="file-import" accept=".json,.csv" style="display:none;">
+              <label class="checkbox-label" style="margin-left: 8px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Smooth out raw 5-minute traffic spikes using a rolling moving average curve">
+                <input type="checkbox" id="toggle-smooth-data" checked>
+                <span>Smooth Curve</span>
               </label>
+              <span class="data-points-badge" id="data-points-count">0 Polled Points</span>
             </div>
           </div>
-        </section>
 
-        <!-- Incidents & Alerts -->
-        <section class="card-section">
-          <div class="section-title">
-            <h2>Live Corridor Incidents</h2>
-            <span class="incident-count-badge" id="incident-count">0</span>
+          <!-- Hero Large Chart Canvas -->
+          <div class="hero-chart-container">
+            <canvas id="trafficTrendChart"></canvas>
           </div>
-          <div class="incidents-list" id="incidents-container">
-            <div class="no-incidents">No major incidents or closures on corridor.</div>
+          
+          <div class="chart-legend-custom">
+            <span class="legend-item"><span class="color-dot sr520"></span> SR-520 (Toll)</span>
+            <span class="legend-item"><span class="color-dot i90"></span> I-90</span>
+            <span class="legend-item"><span class="color-dot live"></span> Live Polled Snapshots</span>
           </div>
-        </section>
 
-        <!-- Turn-by-Turn Guidance -->
-        <section class="card-section">
-          <details class="instructions-accordion">
-            <summary class="accordion-summary">
-              <span>Turn-by-Turn Directions (<span id="active-route-name">SR-520 Bridge</span>)</span>
-              <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-            </summary>
-            <ol class="instructions-list" id="instructions-list">
-              <li>Select a route to view step-by-step guidance.</li>
-            </ol>
-          </details>
-        </section>
-
-      </aside>
-
-      <!-- Map Display Area -->
-      <section class="map-section">
-        <div class="map-overlay-controls">
-          <div class="control-group">
-            <button id="toggle-traffic-layer" class="map-btn active" title="Toggle TomTom Live Traffic Overlay">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14"/></svg>
-              <span>Traffic Heatmap</span>
+          <!-- Export / Import Dataset Toolbar -->
+          <div class="data-toolbar">
+            <button id="btn-export-csv" class="btn btn-secondary btn-sm" title="Export all logged data to CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Export CSV
             </button>
-            <button id="toggle-incidents-layer" class="map-btn active" title="Toggle Traffic Incidents">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
-              <span>Incidents</span>
+            <button id="btn-export-json" class="btn btn-secondary btn-sm" title="Export all logged data to JSON">Export JSON</button>
+            <label class="btn btn-secondary btn-sm" title="Import past traffic log">
+              Import
+              <input type="file" id="file-import" accept=".json,.csv" style="display:none;">
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOTTOM SECTION: Map & Corridor Incidents / Guidance -->
+      <section class="bottom-grid">
+        <!-- Leaflet Map Container -->
+        <div class="map-section card-section">
+          <div class="map-overlay-controls">
+            <div class="control-group">
+              <button id="toggle-traffic-layer" class="map-btn active" title="Toggle TomTom Live Traffic Overlay">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+                Traffic Overlay
+              </button>
+              <button id="toggle-incidents-layer" class="map-btn active" title="Toggle Corridor Incident Markers">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                Incidents
+              </button>
+            </div>
+            <button id="recenter-map" class="map-btn icon-only" title="Recenter Map View">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
-          <button id="recenter-map" class="map-btn" title="Fit map to commute bounds">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.01 9.01 0 0 0-9 9zm9-3v6m-3-3h6"/></svg>
-            <span>Fit Route</span>
-          </button>
+          <div id="map"></div>
         </div>
 
-        <!-- Leaflet Container -->
-        <div id="map"></div>
+        <!-- Incidents & Directions Sidebar Panel -->
+        <div class="side-info-panel">
+          <!-- Incidents & Alerts -->
+          <div class="card-section">
+            <div class="section-title">
+              <h2>Live Corridor Incidents</h2>
+              <span class="incident-count-badge" id="incident-count">0</span>
+            </div>
+            <div class="incidents-list" id="incidents-container">
+              <div class="no-incidents">No major incidents or closures on corridor.</div>
+            </div>
+          </div>
+
+          <!-- Turn-by-Turn Guidance -->
+          <div class="card-section">
+            <details class="instructions-accordion">
+              <summary class="accordion-summary">
+                <span>Turn-by-Turn Directions (<span id="active-route-name">SR-520 Bridge</span>)</span>
+                <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </summary>
+              <ol class="instructions-list" id="instructions-list">
+                <li>Select a route to view step-by-step guidance.</li>
+              </ol>
+            </details>
+          </div>
+        </div>
       </section>
 
     </main>
   </div>
 
   <!-- Settings Modal -->
-  <div id="settings-modal" class="modal-backdrop hidden">
+  <div class="modal-backdrop" id="settings-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>TomTom API Configuration</h3>
-        <button id="close-modal" class="btn-close">&times;</button>
+        <h3>API & Polling Settings</h3>
+        <button class="close-btn" id="close-modal">&times;</button>
       </div>
       <div class="modal-body">
-        <label for="api-key-input">TomTom API Key:</label>
-        <input type="text" id="api-key-input" class="text-input" placeholder="Enter TomTom API Key..." value="QuSopbXau96swtFznGbYJV74BYwuZAML">
-        <p class="help-text">Using key for Routing, Geocoding, Flow Tiles & Traffic Incidents.</p>
-
-        <div class="modal-divider"></div>
-
-        <h4>API Rate Limit & Quota Safety Guards</h4>
         <div class="form-group">
-          <label for="poll-interval-select">Auto-Refresh Interval:</label>
-          <select id="poll-interval-select" class="select-input" style="width:100%;">
-            <option value="120000">Every 2 Minutes (Recommended - 720 calls/day max)</option>
-            <option value="300000">Every 5 Minutes (Economical - 288 calls/day max)</option>
-            <option value="600000">Every 10 Minutes (Ultra Low Quota - 144 calls/day max)</option>
-            <option value="60000">Every 1 Minute (Fast Refresh - 1,440 calls/day max)</option>
-            <option value="0">Manual Refresh Only (0 auto calls)</option>
+          <label for="api-key-input">TomTom API Key</label>
+          <input type="text" id="api-key-input" class="text-input" placeholder="Enter TomTom API Key">
+          <span class="form-help">Default free key applied. Uses 2 calls per polling cycle.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="poll-interval-select">Auto-Refresh Interval</label>
+          <select id="poll-interval-select" class="select-input">
+            <option value="60000">1 Minute</option>
+            <option value="120000">2 Minutes (Default)</option>
+            <option value="300000">5 Minutes</option>
+            <option value="600000">10 Minutes</option>
           </select>
         </div>
+
         <div class="form-group">
-          <label for="daily-limit-input">Daily Quota Safety Limit (Max Calls/Day):</label>
-          <input type="number" id="daily-limit-input" class="text-input" value="2000" min="100" max="2500">
-          <p class="help-text">TomTom provides 2,500 free calls/day. App pauses auto-polling if limit is reached.</p>
+          <label for="daily-limit-input">Daily Quota Limit</label>
+          <input type="number" id="daily-limit-input" class="text-input" value="2000" max="2500">
+          <span class="form-help">Safety guard to prevent exceeding TomTom free 2,500 daily calls.</span>
         </div>
       </div>
       <div class="modal-footer">
-        <button id="btn-save-settings" class="btn btn-primary">Save & Reload</button>
+        <button class="btn btn-primary" id="btn-save-settings">Save Settings</button>
       </div>
     </div>
   </div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- Application JS -->
+  <!-- App JS -->
   <script src="app.js"></script>
 </body>
 </html>
