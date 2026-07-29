@@ -86,7 +86,7 @@ const el = {
 };
 
 // --- Initializer ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initMap();
   initChart();
   setupEventListeners();
@@ -94,7 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
   updateQuotaBadge();
   updateDataPointsCount();
   fetchLiveWeather();
-  syncCloudData();
+
+  // Render initial chart immediately from local storage
+  updateTrendChart();
+
+  // Sync historical dataset from cloud and refresh chart
+  await syncCloudData();
+
+  // Load current live traffic route cards
   loadCommuteData();
   
   startAutoRefresh();
