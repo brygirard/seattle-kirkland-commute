@@ -985,6 +985,32 @@ function updateSingleChart(chartInstance, windowType) {
           pointRadius: 3
         }
       ];
+    } else {
+      labels = isMorningWindow 
+        ? ['12:00 AM', '2:00 AM', '4:00 AM', '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM']
+        : ['12:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '9:00 PM', '11:00 PM', '12:00 AM'];
+      datasets = [
+        {
+          label: `TomTom Baseline SR-520 (${dirLabel})`,
+          data: isSmooth ? applyMovingAverage(baselineSR520, windowSize) : baselineSR520,
+          borderColor: '#06b6d4',
+          backgroundColor: 'rgba(6, 182, 212, 0.12)',
+          borderWidth: 2,
+          tension: lineTension,
+          fill: true,
+          pointRadius: 3
+        },
+        {
+          label: `TomTom Baseline I-90 (${dirLabel})`,
+          data: isSmooth ? applyMovingAverage(baselineI90, windowSize) : baselineI90,
+          borderColor: '#8b5cf6',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          tension: lineTension,
+          fill: false,
+          pointRadius: 3
+        }
+      ];
     }
   }
 
