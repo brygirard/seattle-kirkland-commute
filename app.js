@@ -1045,7 +1045,7 @@ function updateTrendChart() {
   updateDataPointsCount();
 }
 
-function saveLiveSnapshot() {
+async function saveLiveSnapshot() {
   if (appState.routes.length === 0) return;
 
   const sr520 = appState.routes.find(r => r.name.includes('520')) || appState.routes[0];
@@ -1058,13 +1058,29 @@ function saveLiveSnapshot() {
     i90Delay: i90.delayMins
   };
 
+  const oppositeStart = CONFIG.direction === 'morning' ? CONFIG.destCoords : CONFIG.originCoords;
+  const oppositeEnd = CONFIG.direction === 'morning' ? CONFIG.originCoords : CONFIG.destCoords;
+  const oppositeRes = await fetchTomTomRoutes(oppositeStart, oppositeEnd).catch(() => null);
+
+  let oppositeRouteData = { sr520Time: 20, sr520Delay: 0, i90Time: 24, i90Delay: 0 };
+  if (oppositeRes && oppositeRes.routes && oppositeRes.routes.length > 0) {
+    const opp520 = oppositeRes.routes.find(r => r.name.includes('520')) || oppositeRes.routes[0];
+    const oppI90 = oppositeRes.routes.find(r => r.name.includes('90')) || oppositeRes.routes[1] || opp520;
+    oppositeRouteData = {
+      sr520Time: opp520.travelTimeMins,
+      sr520Delay: opp520.delayMins,
+      i90Time: oppI90.travelTimeMins,
+      i90Delay: oppI90.delayMins
+    };
+  }
+
   const now = Date.now();
   const snapshot = {
     timestamp: now,
-    morning: CONFIG.direction === 'morning' ? currentRouteData : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 },
-    evening: CONFIG.direction === 'evening' ? currentRouteData : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 },
+    morning: CONFIG.direction === 'morning' ? currentRouteData : oppositeRouteData,
+    evening: CONFIG.direction === 'evening' ? currentRouteData : oppositeRouteData,
     weather: appState.currentWeather || { temp: 60, rain: 0, code: 0 },
-    incidents: appState.incidents.length
+    incidents: appState.incidents?.length || 0
   };
 
   const history = getHistoricalDatabase();
