@@ -726,7 +726,15 @@ function createTrendChartInstance(canvasId) {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          grid: {
+            color: (ctx) => {
+              const label = ctx.chart.data.labels[ctx.index];
+              if (label && (label.includes(':00 AM') || label.includes(':00 PM'))) {
+                return 'rgba(255, 255, 255, 0.08)';
+              }
+              return 'transparent';
+            }
+          },
           ticks: {
             color: '#94a3b8',
             font: { size: 10 },
