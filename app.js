@@ -1044,7 +1044,23 @@ function getHistoricalDatabase() {
 
 function updateDataPointsCount() {
   const history = getHistoricalDatabase();
-  el.dataPointsCount.textContent = `${history.length} Polled Points`;
+  const dayFilter = appState.selectedDayFilter;
+  
+  if (!el.dataPointsCount) return;
+
+  if (dayFilter === 'all') {
+    el.dataPointsCount.textContent = `${history.length} Polled Points`;
+  } else {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const selectedDayName = dayNames[parseInt(dayFilter, 10)] || 'Selected Day';
+    
+    const count = history.filter(item => {
+      const normalized = normalizeHistoryItem(item);
+      return String(normalized.dayIndex) === String(dayFilter);
+    }).length;
+
+    el.dataPointsCount.textContent = `${count} Points (${selectedDayName}s)`;
+  }
 }
 
 function setupVisibilityHandler() {
@@ -1260,6 +1276,13 @@ function setupEventListeners() {
   if (el.filterTimeWindow) {
     el.filterTimeWindow.addEventListener('change', (e) => {
       appState.selectedTimeWindow = e.target.value;
+      updateTrendChart();
+    });
+  }
+
+  if (el.filterDayOfWeek) {
+    el.filterDayOfWeek.addEventListener('change', (e) => {
+      appState.selectedDayFilter = e.target.value;
       updateTrendChart();
     });
   }
