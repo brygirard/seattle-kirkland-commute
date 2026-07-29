@@ -758,11 +758,11 @@ function updateSingleChart(chartInstance, windowType) {
     }
 
     if (isMorningWindow) {
-      if (m520 < 20 || mI90 < 22) return false;
-      return item.hour >= 6 && item.hour < 11;
+      if (m520 < 18 || mI90 < 20) return false;
+      return item.hour >= 0 && item.hour < 12; // 12:00 AM to 11:59 AM
     } else {
-      if (e520 < 20 || eI90 < 22) return false;
-      return item.hour >= 15 && item.hour < 20;
+      if (e520 < 18 || eI90 < 20) return false;
+      return item.hour >= 12 && item.hour < 24; // 12:00 PM to 11:59 PM
     }
   });
 
@@ -776,14 +776,14 @@ function updateSingleChart(chartInstance, windowType) {
   if (dayFilter === '1' || dayFilter === '5') mult = 0.88;
 
   if (isMorningWindow) {
-    labels = ['6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM'];
-    baselineSR520 = [20, 21, 25, Math.round(32*mult), Math.round(36*mult), Math.round(31*mult), 26, 22, 20];
-    baselineI90   = [25, 26, 30, Math.round(38*mult), Math.round(42*mult), Math.round(36*mult), 30, 27, 25];
+    labels = ['12:00 AM', '2:00 AM', '4:00 AM', '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM'];
+    baselineSR520 = [20, 20, 20, 21, 25, Math.round(32*mult), Math.round(36*mult), Math.round(31*mult), 26, 20];
+    baselineI90   = [24, 24, 25, 26, 30, Math.round(38*mult), Math.round(42*mult), Math.round(36*mult), 30, 25];
   } else {
-    labels = ['3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM'];
+    labels = ['12:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '9:00 PM', '11:00 PM', '12:00 AM'];
     let eveMult = (dayFilter === '4' || dayFilter === '3') ? 1.18 : (dayFilter === '5' ? 0.90 : 1.0);
-    baselineSR520 = [21, 24, 28, Math.round(35*eveMult), Math.round(38*eveMult), Math.round(36*eveMult), 30, 24, 21];
-    baselineI90   = [26, 28, 32, Math.round(40*eveMult), Math.round(44*eveMult), Math.round(41*eveMult), 34, 28, 26];
+    baselineSR520 = [21, 22, 24, 28, Math.round(35*eveMult), Math.round(38*eveMult), Math.round(36*eveMult), 24, 21, 20];
+    baselineI90   = [25, 26, 28, 32, Math.round(40*eveMult), Math.round(44*eveMult), Math.round(41*eveMult), 28, 25, 24];
   }
 
   const dirLabel = isMorningWindow ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
