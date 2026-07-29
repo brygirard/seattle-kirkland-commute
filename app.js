@@ -769,10 +769,10 @@ function updateSingleChart(chartInstance, windowType) {
     }
 
     if (isMorningWindow) {
-      if (m520 < 18 || mI90 < 20) return false;
+      if (m520 <= 5 || mI90 <= 5) return false;
       return item.hour >= 0 && item.hour < 12; // 12:00 AM to 11:59 AM
     } else {
-      if (e520 < 18 || eI90 < 20) return false;
+      if (e520 <= 5 || eI90 <= 5) return false;
       return item.hour >= 12 && item.hour < 24; // 12:00 PM to 11:59 PM
     }
   });

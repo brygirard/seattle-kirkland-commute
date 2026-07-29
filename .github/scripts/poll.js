@@ -30,11 +30,11 @@ function getSR520TollRate(date = new Date()) {
   return 3.60;
 }
 
-// Physical sanity validation for travel times
+// Physical sanity validation for travel times (must be non-zero valid route > 5 mins)
 function isValidRouteData(data) {
   if (!data) return false;
-  if (!data.sr520Time || data.sr520Time < 18) return false;
-  if (!data.i90Time || data.i90Time < 20) return false;
+  if (!data.sr520Time || data.sr520Time <= 5) return false;
+  if (!data.i90Time || data.i90Time <= 5) return false;
   return true;
 }
 
