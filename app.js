@@ -1192,46 +1192,6 @@ function setupEventListeners() {
   el.closeModal?.addEventListener('click', () => {
     el.settingsModal?.classList.add('hidden');
   });
-
-  el.btnSaveSettings?.addEventListener('click', () => {
-    if (el.apiKeyInput) CONFIG.apiKey = el.apiKeyInput.value.trim();
-    if (el.pollIntervalSelect) CONFIG.refreshIntervalMs = parseInt(el.pollIntervalSelect.value, 10);
-    if (el.dailyLimitInput) CONFIG.dailyQuotaLimit = parseInt(el.dailyLimitInput.value, 10);
-
-    localStorage.setItem('commute_api_key', CONFIG.apiKey);
-    localStorage.setItem('commute_poll_interval', CONFIG.refreshIntervalMs);
-    localStorage.setItem('commute_daily_limit', CONFIG.dailyQuotaLimit);
-
-    el.settingsModal?.classList.add('hidden');
-    startAutoRefresh();
-    loadCommuteData();
-  });
-
-  el.btnSaveSettings.addEventListener('click', () => {
-    const newKey = el.apiKeyInput.value.trim();
-    const newInterval = parseInt(el.pollIntervalSelect.value, 10);
-    const newLimit = parseInt(el.dailyLimitInput.value, 10);
-
-    if (newKey) {
-      CONFIG.apiKey = newKey;
-      localStorage.setItem('tomtom_api_key', newKey);
-    }
-
-    if (!isNaN(newInterval)) {
-      CONFIG.refreshIntervalMs = newInterval;
-      localStorage.setItem('tomtom_poll_interval', String(newInterval));
-      startAutoRefresh();
-    }
-
-    if (!isNaN(newLimit) && newLimit > 0) {
-      CONFIG.dailyQuotaLimit = newLimit;
-      localStorage.setItem('tomtom_daily_limit', String(newLimit));
-      updateQuotaBadge();
-    }
-
-    el.settingsModal.classList.add('hidden');
-    loadCommuteData();
-  });
 }
 
 function startAutoRefresh() {
