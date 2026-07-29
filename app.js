@@ -32,7 +32,7 @@ let appState = {
   showTrafficOverlay: true,
   showIncidentsOverlay: true,
   trendChart: null,
-  activeTrendWindow: 'tomtomBaseline', // 'tomtomBaseline' | 'polledActual' | 'combinedOverlay'
+  activeTrendWindow: 'polledActual', // 'tomtomBaseline' | 'polledActual' | 'combinedOverlay'
   selectedTimeWindow: 'morning',        // 'morning' | 'evening' | 'byDay'
   selectedDayFilter: 'all'             // 'all' | '1'..'6' | '0'
 };
