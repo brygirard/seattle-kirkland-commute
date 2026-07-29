@@ -747,6 +747,35 @@ function initChart() {
   appState.eveningChart = createTrendChartInstance('eveningTrendChart');
 }
 
+function getTomTomBaselineForTime(hour, minute, isMorningWindow, dayFilter) {
+  let mult = 1.0;
+  if (dayFilter === '2' || dayFilter === '3' || dayFilter === '4') mult = 1.15;
+  if (dayFilter === '1' || dayFilter === '5') mult = 0.88;
+
+  const timeFloat = hour + (minute / 60);
+
+  if (isMorningWindow) {
+    let sr520 = 20;
+    let i90 = 24;
+    if (timeFloat >= 6 && timeFloat <= 10) {
+      const distFromPeak = Math.abs(timeFloat - 8.0);
+      sr520 = Math.round((20 + (16 * mult * Math.exp(-Math.pow(distFromPeak, 2) / 1.5))) * 10) / 10;
+      i90 = Math.round((25 + (18 * mult * Math.exp(-Math.pow(distFromPeak, 2) / 1.5))) * 10) / 10;
+    }
+    return { sr520, i90 };
+  } else {
+    let eveMult = (dayFilter === '4' || dayFilter === '3') ? 1.18 : (dayFilter === '5' ? 0.90 : 1.0);
+    let sr520 = 20;
+    let i90 = 24;
+    if (timeFloat >= 15 && timeFloat <= 19) {
+      const distFromPeak = Math.abs(timeFloat - 17.25);
+      sr520 = Math.round((21 + (17 * eveMult * Math.exp(-Math.pow(distFromPeak, 2) / 1.8))) * 10) / 10;
+      i90 = Math.round((26 + (18 * eveMult * Math.exp(-Math.pow(distFromPeak, 2) / 1.8))) * 10) / 10;
+    }
+    return { sr520, i90 };
+  }
+}
+
 function updateSingleChart(chartInstance, windowType) {
   if (!chartInstance) return;
 
@@ -895,38 +924,61 @@ function updateSingleChart(chartInstance, windowType) {
       const rawSR520 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.sr520Time : s.evening.sr520Time);
       const rawI90 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.i90Time : s.evening.i90Time);
 
-      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
-      const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
+      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, windowSize) : rawSR520;
+      const actualI90 = isSmooth ? applyMovingAverage(rawI90, windowSize) : rawI90;
+
+      const baselineSR520Overlay = deduplicatedHistory.map(s => {
+        const parts = s.timeStr.split(':');
+        const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
+        return getTomTomBaselineForTime(s.hour, min, isMorningWindow, dayFilter).sr520;
+      });
+
+      const baselineI90Overlay = deduplicatedHistory.map(s => {
+        const parts = s.timeStr.split(':');
+        const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
+        return getTomTomBaselineForTime(s.hour, min, isMorningWindow, dayFilter).i90;
+      });
 
       datasets = [
         {
           label: 'TomTom Historic SR-520',
-          data: baselineSR520,
-          borderColor: 'rgba(6, 182, 212, 0.4)',
+          data: baselineSR520Overlay,
+          borderColor: 'rgba(6, 182, 212, 0.6)',
           borderWidth: 2,
           borderDash: [4, 4],
-          tension: 0.4,
+          tension: lineTension,
           fill: false,
           pointRadius: 0
         },
         {
-          label: `Polled SR-520 (${dirLabel})`,
+          label: 'TomTom Historic I-90',
+          data: baselineI90Overlay,
+          borderColor: 'rgba(139, 92, 246, 0.6)',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          tension: lineTension,
+          fill: false,
+          pointRadius: 0
+        },
+        {
+          label: `Polled Actual SR-520 (${dirLabel})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           borderWidth: 3,
-          tension: 0.4,
+          tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: true,
           pointRadius: 3
         },
         {
-          label: `Polled I-90 (${dirLabel})`,
+          label: `Polled Actual I-90 (${dirLabel})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
-          borderWidth: 2,
-          tension: 0.4,
+          borderWidth: 2.5,
+          borderDash: [3, 3],
+          tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: false,
           pointRadius: 3
