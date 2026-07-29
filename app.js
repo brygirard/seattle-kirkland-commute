@@ -777,6 +777,53 @@ function getTomTomBaselineForTime(hour, minute, isMorningWindow, dayFilter) {
   }
 }
 
+function aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow) {
+  const minHour = isMorningWindow ? 0 : 12;
+  const maxHour = isMorningWindow ? 12 : 24;
+
+  const buckets = {};
+
+  filteredHistory.forEach(item => {
+    if (item.hour >= minHour && item.hour < maxHour) {
+      const parts = item.timeStr.split(':');
+      const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
+      const roundedMin = Math.floor(min / 5) * 5;
+      const key = `${String(item.hour).padStart(2, '0')}:${String(roundedMin).padStart(2, '0')}`;
+
+      if (!buckets[key]) buckets[key] = { sr520: [], i90: [] };
+
+      const time520 = isMorningWindow ? item.morning?.sr520Time : item.evening?.sr520Time;
+      const timeI90 = isMorningWindow ? item.morning?.i90Time : item.evening?.i90Time;
+
+      if (time520 > 5) buckets[key].sr520.push(time520);
+      if (timeI90 > 5) buckets[key].i90.push(timeI90);
+    }
+  });
+
+  const sortedKeys = Object.keys(buckets).sort();
+  const labels = [];
+  const rawSR520 = [];
+  const rawI90 = [];
+
+  sortedKeys.forEach(k => {
+    const [h, m] = k.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayH = (h % 12) || 12;
+    const timeStr = `${displayH}:${String(m).padStart(2, '0')} ${period}`;
+    labels.push(timeStr);
+
+    const sList = buckets[k].sr520;
+    const iList = buckets[k].i90;
+    const sAvg = sList.length > 0 ? Math.round((sList.reduce((a,b)=>a+b,0)/sList.length)*10)/10 : null;
+    const iAvg = iList.length > 0 ? Math.round((iList.reduce((a,b)=>a+b,0)/iList.length)*10)/10 : null;
+
+    rawSR520.push(sAvg);
+    rawI90.push(iAvg);
+  });
+
+  return { labels, rawSR520, rawI90, keys: sortedKeys };
+}
+
 function updateSingleChart(chartInstance, windowType) {
   if (!chartInstance) return;
 
@@ -862,26 +909,18 @@ function updateSingleChart(chartInstance, windowType) {
       }
     ];
   } else if (mode === 'polledActual') {
-    const deduplicatedHistory = [];
-    let lastTime = 0;
-    filteredHistory.forEach(s => {
-      if (s.timestamp - lastTime >= 120000) {
-        deduplicatedHistory.push(s);
-        lastTime = s.timestamp;
-      }
-    });
+    const agg = aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow);
 
-    if (deduplicatedHistory.length > 0) {
-      labels = deduplicatedHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const rawSR520 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.sr520Time : s.evening.sr520Time);
-      const rawI90 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.i90Time : s.evening.i90Time);
+    if (agg.labels.length > 0) {
+      labels = agg.labels;
+      const actualSR520 = isSmooth ? applyMovingAverage(agg.rawSR520, windowSize) : agg.rawSR520;
+      const actualI90 = isSmooth ? applyMovingAverage(agg.rawI90, windowSize) : agg.rawI90;
 
-      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, windowSize) : rawSR520;
-      const actualI90 = isSmooth ? applyMovingAverage(rawI90, windowSize) : rawI90;
+      const titleSuffix = dayFilter === 'all' ? 'All Days Avg' : 'Daily Avg';
 
       datasets = [
         {
-          label: `Polled SR-520 (${dirLabel})`,
+          label: `Polled Actual SR-520 (${dirLabel} - ${titleSuffix})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -889,10 +928,10 @@ function updateSingleChart(chartInstance, windowType) {
           tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: true,
-          pointRadius: deduplicatedHistory.length > 50 ? 1.5 : 3
+          pointRadius: agg.labels.length > 50 ? 1.5 : 3
         },
         {
-          label: `Polled I-90 (${dirLabel})`,
+          label: `Polled Actual I-90 (${dirLabel} - ${titleSuffix})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
@@ -901,7 +940,7 @@ function updateSingleChart(chartInstance, windowType) {
           tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: deduplicatedHistory.length > 50 ? 1.5 : 3
+          pointRadius: agg.labels.length > 50 ? 1.5 : 3
         }
       ];
     } else {
@@ -911,34 +950,24 @@ function updateSingleChart(chartInstance, windowType) {
       ];
     }
   } else if (mode === 'combinedOverlay') {
-    const deduplicatedHistory = [];
-    let lastTime = 0;
-    filteredHistory.forEach(s => {
-      if (s.timestamp - lastTime >= 120000) {
-        deduplicatedHistory.push(s);
-        lastTime = s.timestamp;
-      }
-    });
+    const agg = aggregateHistoryByTimeBucket(filteredHistory, isMorningWindow);
 
-    if (deduplicatedHistory.length > 0) {
-      labels = deduplicatedHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const rawSR520 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.sr520Time : s.evening.sr520Time);
-      const rawI90 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.i90Time : s.evening.i90Time);
+    if (agg.labels.length > 0) {
+      labels = agg.labels;
+      const actualSR520 = isSmooth ? applyMovingAverage(agg.rawSR520, windowSize) : agg.rawSR520;
+      const actualI90 = isSmooth ? applyMovingAverage(agg.rawI90, windowSize) : agg.rawI90;
 
-      const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, windowSize) : rawSR520;
-      const actualI90 = isSmooth ? applyMovingAverage(rawI90, windowSize) : rawI90;
-
-      const baselineSR520Overlay = deduplicatedHistory.map(s => {
-        const parts = s.timeStr.split(':');
-        const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
-        return getTomTomBaselineForTime(s.hour, min, isMorningWindow, dayFilter).sr520;
+      const baselineSR520Overlay = agg.keys.map(k => {
+        const [h, m] = k.split(':').map(Number);
+        return getTomTomBaselineForTime(h, m, isMorningWindow, dayFilter).sr520;
       });
 
-      const baselineI90Overlay = deduplicatedHistory.map(s => {
-        const parts = s.timeStr.split(':');
-        const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
-        return getTomTomBaselineForTime(s.hour, min, isMorningWindow, dayFilter).i90;
+      const baselineI90Overlay = agg.keys.map(k => {
+        const [h, m] = k.split(':').map(Number);
+        return getTomTomBaselineForTime(h, m, isMorningWindow, dayFilter).i90;
       });
+
+      const titleSuffix = dayFilter === 'all' ? 'All Days Avg' : 'Daily Avg';
 
       datasets = [
         {
@@ -962,7 +991,7 @@ function updateSingleChart(chartInstance, windowType) {
           pointRadius: 0
         },
         {
-          label: `Polled Actual SR-520 (${dirLabel})`,
+          label: `Polled Actual SR-520 (${dirLabel} - ${titleSuffix})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -973,7 +1002,7 @@ function updateSingleChart(chartInstance, windowType) {
           pointRadius: 3
         },
         {
-          label: `Polled Actual I-90 (${dirLabel})`,
+          label: `Polled Actual I-90 (${dirLabel} - ${titleSuffix})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
