@@ -730,6 +730,7 @@ function createTrendChartInstance(canvasId) {
           ticks: { color: '#94a3b8', font: { size: 10 } }
         },
         y: {
+          min: 15,
           title: { display: true, text: 'Travel Time (mins)', color: '#94a3b8', font: { size: 10 } },
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
           ticks: { color: '#94a3b8', font: { size: 10 } }
