@@ -630,7 +630,7 @@ function initChart() {
   });
 }
 
-// Normalize entry for rendering using robust Intl.DateTimeFormat
+// Normalize entry for rendering using robust Intl.DateTimeFormat (12-hour AM/PM timeStr)
 function normalizeHistoryItem(item) {
   const ts = item.timestamp || Date.now();
   const d = new Date(ts);
@@ -638,26 +638,37 @@ function normalizeHistoryItem(item) {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Los_Angeles',
     weekday: 'long',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
-    hourCycle: 'h23'
+    hour12: true
   });
   
   const parts = formatter.formatToParts(d);
   let dayOfWeek = 'Monday';
-  let hourStr = '00';
+  let hourStr = '12';
   let minStr = '00';
+  let dayPeriod = 'AM';
 
   parts.forEach(p => {
     if (p.type === 'weekday') dayOfWeek = p.value;
     if (p.type === 'hour') hourStr = p.value;
     if (p.type === 'minute') minStr = p.value;
+    if (p.type === 'dayPeriod') dayPeriod = p.value;
   });
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayIndex = dayNames.indexOf(dayOfWeek);
-  const hour = parseInt(hourStr, 10) % 24;
-  const timeStr = `${hourStr.padStart(2, '0')}:${minStr.padStart(2, '0')}`;
+
+  const h24Formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    hour: 'numeric',
+    hourCycle: 'h23'
+  });
+  const h24Parts = h24Formatter.formatToParts(d);
+  const hourPart = h24Parts.find(p => p.type === 'hour');
+  const hour = hourPart ? parseInt(hourPart.value, 10) % 24 : d.getHours();
+
+  const timeStr = `${hourStr}:${minStr.padStart(2, '0')} ${dayPeriod}`;
 
   const morning = item.morning || (item.direction === 'morning' ? { sr520Time: item.sr520Time || 0, sr520Delay: item.sr520Delay || 0, i90Time: item.i90Time || 0, i90Delay: item.i90Delay || 0 } : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 });
   const evening = item.evening || (item.direction === 'evening' ? { sr520Time: item.sr520Time || 0, sr520Delay: item.sr520Delay || 0, i90Time: item.i90Time || 0, i90Delay: item.i90Delay || 0 } : { sr520Time: 0, sr520Delay: 0, i90Time: 0, i90Delay: 0 });
