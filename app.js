@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
   startAutoRefresh();
 });
 
-// Fetch all monthly historical partitions via data/index.json
+// Fetch all monthly historical partitions via data/index.json and sanitize dataset
 async function syncCloudData() {
   try {
     let filesToFetch = ['data/history_2026-07.json', 'data/history_2026_07.json'];
@@ -111,7 +111,15 @@ async function syncCloudData() {
       }
     } catch (e) {}
 
-    const localData = getHistoricalDatabase();
+    // Load local storage and purge dirty test items (< 20 mins for SR520, < 22 mins for I90)
+    let localData = getHistoricalDatabase().filter(item => {
+      const m520 = item.morning?.sr520Time || item.sr520Time || 0;
+      const e520 = item.evening?.sr520Time || item.sr520Time || 0;
+      const mI90 = item.morning?.i90Time || item.i90Time || 0;
+      const eI90 = item.evening?.i90Time || item.i90Time || 0;
+      return m520 >= 20 && e520 >= 20 && mI90 >= 22 && eI90 >= 22;
+    });
+
     const localTimestamps = new Set(localData.map(d => d?.timestamp).filter(Boolean));
     let mergedCount = 0;
 
@@ -123,9 +131,16 @@ async function syncCloudData() {
           if (Array.isArray(cloudData)) {
             cloudData.forEach(item => {
               if (item && item.timestamp && !localTimestamps.has(item.timestamp)) {
-                localData.push(item);
-                localTimestamps.add(item.timestamp);
-                mergedCount++;
+                const m520 = item.morning?.sr520Time || item.sr520Time || 0;
+                const e520 = item.evening?.sr520Time || item.sr520Time || 0;
+                const mI90 = item.morning?.i90Time || item.i90Time || 0;
+                const eI90 = item.evening?.i90Time || item.i90Time || 0;
+
+                if (m520 >= 20 && e520 >= 20 && mI90 >= 22 && eI90 >= 22) {
+                  localData.push(item);
+                  localTimestamps.add(item.timestamp);
+                  mergedCount++;
+                }
               }
             });
           }
@@ -133,12 +148,10 @@ async function syncCloudData() {
       } catch (err) {}
     }
 
-    if (mergedCount > 0) {
-      localData.sort((a, b) => (a?.timestamp || 0) - (b?.timestamp || 0));
-      localStorage.setItem('commute_historical_db', JSON.stringify(localData));
-      updateDataPointsCount();
-      updateTrendChart();
-    }
+    localData.sort((a, b) => (a?.timestamp || 0) - (b?.timestamp || 0));
+    localStorage.setItem('commute_historical_db', JSON.stringify(localData));
+    updateDataPointsCount();
+    updateTrendChart();
   } catch (err) {}
 }
 
@@ -711,17 +724,20 @@ function updateSingleChart(chartInstance, windowType) {
   const history = historyRaw.map(normalizeHistoryItem);
 
   let filteredHistory = history.filter(item => {
-    const mTime = item.morning?.sr520Time || 0;
-    const eTime = item.evening?.sr520Time || 0;
-    if (mTime < 15 && eTime < 15) return false;
+    const m520 = item.morning?.sr520Time || 0;
+    const e520 = item.evening?.sr520Time || 0;
+    const mI90 = item.morning?.i90Time || 0;
+    const eI90 = item.evening?.i90Time || 0;
 
     if (dayFilter !== 'all' && String(item.dayIndex) !== String(dayFilter)) {
       return false;
     }
 
     if (isMorningWindow) {
+      if (m520 < 20 || mI90 < 22) return false;
       return item.hour >= 6 && item.hour < 11;
     } else {
+      if (e520 < 20 || eI90 < 22) return false;
       return item.hour >= 15 && item.hour < 20;
     }
   });
