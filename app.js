@@ -656,41 +656,78 @@ function applyMovingAverage(arr, windowSize = 3) {
   return result;
 }
 
-function updateTrendChart() {
-  if (!appState.trendChart) return;
+function createTrendChartInstance(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  const ctx = canvas.getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: '#94a3b8', font: { size: 11 } } },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} mins`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        },
+        y: {
+          title: { display: true, text: 'Travel Time (mins)', color: '#94a3b8', font: { size: 10 } },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function initChart() {
+  if (appState.morningChart) { appState.morningChart.destroy(); appState.morningChart = null; }
+  if (appState.eveningChart) { appState.eveningChart.destroy(); appState.eveningChart = null; }
+
+  appState.morningChart = createTrendChartInstance('morningTrendChart');
+  appState.eveningChart = createTrendChartInstance('eveningTrendChart');
+}
+
+function updateSingleChart(chartInstance, windowType) {
+  if (!chartInstance) return;
 
   const mode = appState.activeTrendWindow;
-  const timeWindow = appState.selectedTimeWindow;
   const dayFilter = appState.selectedDayFilter;
   const isSmooth = document.getElementById('toggle-smooth-data')?.checked ?? true;
+  const isMorningWindow = windowType === 'morning';
 
   const historyRaw = getHistoricalDatabase();
   const history = historyRaw.map(normalizeHistoryItem);
 
   let filteredHistory = history.filter(item => {
-    // 1. Sanitize bad data points / test artifacts (< 15 mins travel time)
     const mTime = item.morning?.sr520Time || 0;
     const eTime = item.evening?.sr520Time || 0;
     if (mTime < 15 && eTime < 15) return false;
 
-    // 2. Filter by Day of Week if selected
     if (dayFilter !== 'all' && String(item.dayIndex) !== String(dayFilter)) {
       return false;
     }
 
-    // 3. Filter by Time Window selected in UI
-    if (timeWindow === 'morning') {
+    if (isMorningWindow) {
       return item.hour >= 6 && item.hour < 11;
-    } else if (timeWindow === 'evening') {
+    } else {
       return item.hour >= 15 && item.hour < 20;
     }
-
-    return true;
   });
 
   let labels = [];
   let datasets = [];
-
   let baselineSR520 = [];
   let baselineI90 = [];
 
@@ -698,25 +735,23 @@ function updateTrendChart() {
   if (dayFilter === '2' || dayFilter === '3' || dayFilter === '4') mult = 1.15;
   if (dayFilter === '1' || dayFilter === '5') mult = 0.88;
 
-  if (timeWindow === 'morning') {
+  if (isMorningWindow) {
     labels = ['6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM'];
     baselineSR520 = [20, 21, 25, Math.round(32*mult), Math.round(36*mult), Math.round(31*mult), 26, 22, 20];
     baselineI90   = [25, 26, 30, Math.round(38*mult), Math.round(42*mult), Math.round(36*mult), 30, 27, 25];
-  } else if (timeWindow === 'evening') {
+  } else {
     labels = ['3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM'];
     let eveMult = (dayFilter === '4' || dayFilter === '3') ? 1.18 : (dayFilter === '5' ? 0.90 : 1.0);
     baselineSR520 = [21, 24, 28, Math.round(35*eveMult), Math.round(38*eveMult), Math.round(36*eveMult), 30, 24, 21];
     baselineI90   = [26, 28, 32, Math.round(40*eveMult), Math.round(44*eveMult), Math.round(41*eveMult), 34, 28, 26];
-  } else if (timeWindow === 'byDay') {
-    labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    baselineSR520 = [26, 35, 36, 37, 28, 22, 21];
-    baselineI90   = [31, 41, 42, 43, 33, 27, 26];
   }
+
+  const dirLabel = isMorningWindow ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
   if (mode === 'tomtomBaseline') {
     datasets = [
       {
-        label: 'TomTom Historic SR-520 (Toll)',
+        label: `TomTom Baseline SR-520 (${dirLabel})`,
         data: isSmooth ? applyMovingAverage(baselineSR520) : baselineSR520,
         borderColor: '#06b6d4',
         backgroundColor: 'rgba(6, 182, 212, 0.12)',
@@ -727,7 +762,7 @@ function updateTrendChart() {
         pointRadius: 3
       },
       {
-        label: 'TomTom Historic I-90',
+        label: `TomTom Baseline I-90 (${dirLabel})`,
         data: isSmooth ? applyMovingAverage(baselineI90) : baselineI90,
         borderColor: '#8b5cf6',
         backgroundColor: 'rgba(139, 92, 246, 0.05)',
@@ -740,7 +775,6 @@ function updateTrendChart() {
       }
     ];
   } else if (mode === 'polledActual') {
-    // Deduplicate points within 2 minutes of each other to keep X-axis labels un-clustered
     const deduplicatedHistory = [];
     let lastTime = 0;
     filteredHistory.forEach(s => {
@@ -752,14 +786,11 @@ function updateTrendChart() {
 
     if (deduplicatedHistory.length > 0) {
       labels = deduplicatedHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const isMorn = timeWindow === 'morning' ? true : (timeWindow === 'evening' ? false : (CONFIG.direction === 'morning'));
-      const rawSR520 = deduplicatedHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
-      const rawI90 = deduplicatedHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+      const rawSR520 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.sr520Time : s.evening.sr520Time);
+      const rawI90 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.i90Time : s.evening.i90Time);
 
       const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
       const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
-
-      const dirLabel = isMorn ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
       datasets = [
         {
@@ -787,9 +818,9 @@ function updateTrendChart() {
         }
       ];
     } else {
-      labels = ['No Polled Points Yet'];
+      labels = ['No Polled Points in Window'];
       datasets = [
-        { label: 'Your Polled Live Data', data: [0], borderColor: '#10b981', borderWidth: 2 }
+        { label: `Polled Actual (${dirLabel})`, data: [0], borderColor: '#10b981', borderWidth: 2 }
       ];
     }
   } else if (mode === 'combinedOverlay') {
@@ -804,14 +835,11 @@ function updateTrendChart() {
 
     if (deduplicatedHistory.length > 0) {
       labels = deduplicatedHistory.map(s => `${s.dayOfWeek.slice(0,3)} ${s.timeStr}`);
-      const isMorn = timeWindow === 'morning' ? true : (timeWindow === 'evening' ? false : (CONFIG.direction === 'morning'));
-      const rawSR520 = deduplicatedHistory.map(s => isMorn ? s.morning.sr520Time : s.evening.sr520Time);
-      const rawI90 = deduplicatedHistory.map(s => isMorn ? s.morning.i90Time : s.evening.i90Time);
+      const rawSR520 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.sr520Time : s.evening.sr520Time);
+      const rawI90 = deduplicatedHistory.map(s => isMorningWindow ? s.morning.i90Time : s.evening.i90Time);
 
       const actualSR520 = isSmooth ? applyMovingAverage(rawSR520, 3) : rawSR520;
       const actualI90 = isSmooth ? applyMovingAverage(rawI90, 3) : rawI90;
-
-      const dirLabel = isMorn ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
       datasets = [
         {
@@ -825,7 +853,7 @@ function updateTrendChart() {
           pointRadius: 0
         },
         {
-          label: `Polled Actual SR-520 (${dirLabel})`,
+          label: `Polled SR-520 (${dirLabel})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -836,7 +864,7 @@ function updateTrendChart() {
           pointRadius: 3
         },
         {
-          label: `Polled Actual I-90 (${dirLabel})`,
+          label: `Polled I-90 (${dirLabel})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
@@ -850,10 +878,18 @@ function updateTrendChart() {
     }
   }
 
-  appState.trendChart.data.labels = labels;
-  appState.trendChart.data.datasets = datasets;
-  appState.trendChart.update();
+  chartInstance.data.labels = labels;
+  chartInstance.data.datasets = datasets;
+  chartInstance.update();
+}
 
+function updateTrendChart() {
+  if (!appState.morningChart && !appState.eveningChart) {
+    initChart();
+  }
+
+  updateSingleChart(appState.morningChart, 'morning');
+  updateSingleChart(appState.eveningChart, 'evening');
   updateDataPointsCount();
 }
 

@@ -119,19 +119,19 @@
         </div>
       </section>
 
-      <!-- HERO FEATURE: Main Large Trend Graph Section -->
+      <!-- HERO FEATURE: Dual Stacked Trend Graphs -->
       <section class="hero-chart-section card-section">
         <div class="section-title">
-          <h2>Optimal Departure Time & Traffic Trends</h2>
-          <span class="badge spark">Primary Feature</span>
+          <h2>Optimal Departure Times & Traffic Trends</h2>
+          <span class="badge spark">Dual Direction View</span>
         </div>
         
         <div class="trend-advisor-card">
           <div class="advisor-header">
             <div class="advisor-icon">💡</div>
             <div class="advisor-body">
-              <h4 id="optimal-time-heading">Best Departure Window</h4>
-              <p id="optimal-time-text">Analyzing traffic patterns...</p>
+              <h4 id="optimal-time-heading">Best Departure Windows</h4>
+              <p id="optimal-time-text">Analyzing morning & evening traffic patterns...</p>
             </div>
 
             <!-- Tab Switcher for Data Separation -->
@@ -142,19 +142,10 @@
             </div>
           </div>
 
-          <!-- Granular Filter Bar -->
+          <!-- Controls Bar -->
           <div class="day-filter-bar" id="day-filter-bar">
             <div class="filter-row">
-              <label for="filter-time-window">Time Window:</label>
-              <select id="filter-time-window" class="select-input flex-1">
-                <option value="morning">Morning Rush (6:00 AM - 10:00 AM)</option>
-                <option value="evening">Evening Rush (3:00 PM - 7:00 PM)</option>
-                <option value="byDay">Full Week Profile (Mon-Sun)</option>
-              </select>
-            </div>
-
-            <div class="filter-row">
-              <label for="filter-day-of-week">Day:</label>
+              <label for="filter-day-of-week">Filter Day:</label>
               <select id="filter-day-of-week" class="select-input">
                 <option value="all">All Days Combined</option>
                 <option value="1">Mondays</option>
@@ -166,7 +157,7 @@
                 <option value="0">Sundays</option>
               </select>
 
-              <label class="checkbox-label" style="margin-left: 8px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Smooth out raw 5-minute traffic spikes using a rolling moving average curve">
+              <label class="checkbox-label" style="margin-left: 12px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Smooth out raw 5-minute traffic spikes using a rolling moving average curve">
                 <input type="checkbox" id="toggle-smooth-data" checked>
                 <span>Smooth Curve</span>
               </label>
@@ -174,19 +165,28 @@
             </div>
           </div>
 
-          <!-- Hero Large Chart Canvas -->
-          <div class="hero-chart-container">
-            <canvas id="trafficTrendChart"></canvas>
+          <!-- CHART 1: Morning Commute (Seattle ➔ Kirkland) -->
+          <div class="chart-block">
+            <div class="chart-block-header">
+              <span class="chart-block-title">🌅 Morning Commute (Seattle ➔ Kirkland)</span>
+            </div>
+            <div class="hero-chart-container">
+              <canvas id="morningTrendChart"></canvas>
+            </div>
           </div>
-          
-          <div class="chart-legend-custom">
-            <span class="legend-item"><span class="color-dot sr520"></span> SR-520 (Toll)</span>
-            <span class="legend-item"><span class="color-dot i90"></span> I-90</span>
-            <span class="legend-item"><span class="color-dot live"></span> Live Polled Snapshots</span>
+
+          <!-- CHART 2: Evening Commute (Kirkland ➔ Seattle) -->
+          <div class="chart-block" style="margin-top: 24px;">
+            <div class="chart-block-header">
+              <span class="chart-block-title">🌆 Evening Commute (Kirkland ➔ Seattle)</span>
+            </div>
+            <div class="hero-chart-container">
+              <canvas id="eveningTrendChart"></canvas>
+            </div>
           </div>
 
           <!-- Export / Import Dataset Toolbar -->
-          <div class="data-toolbar">
+          <div class="data-toolbar" style="margin-top: 16px;">
             <button id="btn-export-csv" class="btn btn-secondary btn-sm" title="Export all logged data to CSV">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
               Export CSV

@@ -276,11 +276,31 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+.chart-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  margin-top: 12px;
+}
+
+.chart-block-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: -0.01em;
+}
+
 .hero-chart-container {
   position: relative;
-  height: 480px;
+  height: 340px;
   width: 100%;
-  margin-top: 16px;
   background: rgba(15, 23, 42, 0.4);
   border-radius: var(--radius-md);
   padding: 12px;
