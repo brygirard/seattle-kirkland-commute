@@ -1111,7 +1111,7 @@ function importDataFile(file) {
 }
 
 function setupEventListeners() {
-  el.btnRefresh.addEventListener('click', () => {
+  el.btnRefresh?.addEventListener('click', () => {
     const now = Date.now();
     if (now - appState.lastManualClickTime < CONFIG.minManualCooldownMs) {
       const remainingSecs = Math.ceil((CONFIG.minManualCooldownMs - (now - appState.lastManualClickTime)) / 1000);
@@ -1122,34 +1122,45 @@ function setupEventListeners() {
     loadCommuteData();
   });
 
-  el.btnDirectionToggle.addEventListener('click', () => {
+  el.btnDirectionToggle?.addEventListener('click', () => {
     CONFIG.direction = CONFIG.direction === 'morning' ? 'evening' : 'morning';
     
     if (CONFIG.direction === 'morning') {
-      el.commuteDirectionText.textContent = 'Morning Commute (To Office)';
-      el.routeStartLabel.textContent = '225 Cedar St, Seattle';
-      el.routeEndLabel.textContent = 'Google Kirkland (747 6th St S)';
+      if (el.commuteDirectionText) el.commuteDirectionText.textContent = 'Morning Commute (To Office)';
+      if (el.routeStartLabel) el.routeStartLabel.textContent = '225 Cedar St, Seattle';
+      if (el.routeEndLabel) el.routeEndLabel.textContent = 'Google Kirkland (747 6th St S)';
     } else {
-      el.commuteDirectionText.textContent = 'Evening Commute (To Home)';
-      el.routeStartLabel.textContent = 'Google Kirkland (747 6th St S)';
-      el.routeEndLabel.textContent = '225 Cedar St, Seattle';
+      if (el.commuteDirectionText) el.commuteDirectionText.textContent = 'Evening Commute (To Home)';
+      if (el.routeStartLabel) el.routeStartLabel.textContent = 'Google Kirkland (747 6th St S)';
+      if (el.routeEndLabel) el.routeEndLabel.textContent = '225 Cedar St, Seattle';
     }
 
     loadCommuteData();
   });
 
-  el.toggleTrafficLayer.addEventListener('click', () => {
+  el.toggleTrafficLayer?.addEventListener('click', () => {
     appState.showTrafficOverlay = !appState.showTrafficOverlay;
-    el.toggleTrafficLayer.classList.toggle('active', appState.showTrafficOverlay);
+    if (el.toggleTrafficLayer) el.toggleTrafficLayer.classList.toggle('active', appState.showTrafficOverlay);
 
     if (appState.showTrafficOverlay) {
-      appState.mapLayers.trafficFlow.addTo(appState.map);
+      appState.mapLayers.trafficFlow?.addTo(appState.map);
     } else {
-      appState.map.removeLayer(appState.mapLayers.trafficFlow);
+      if (appState.mapLayers.trafficFlow) appState.map?.removeLayer(appState.mapLayers.trafficFlow);
     }
   });
 
-  el.recenterMap.addEventListener('click', () => {
+  el.toggleIncidentsLayer?.addEventListener('click', () => {
+    appState.showIncidentsOverlay = !appState.showIncidentsOverlay;
+    if (el.toggleIncidentsLayer) el.toggleIncidentsLayer.classList.toggle('active', appState.showIncidentsOverlay);
+
+    if (appState.showIncidentsOverlay) {
+      appState.mapLayers.incidentsGroup?.addTo(appState.map);
+    } else {
+      if (appState.mapLayers.incidentsGroup) appState.map?.removeLayer(appState.mapLayers.incidentsGroup);
+    }
+  });
+
+  el.recenterMap?.addEventListener('click', () => {
     const selectedPolyline = appState.mapLayers.routePolylines[appState.selectedRouteIndex];
     if (selectedPolyline && appState.map) {
       try {
