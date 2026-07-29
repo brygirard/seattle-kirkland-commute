@@ -727,7 +727,19 @@ function createTrendChartInstance(canvasId) {
       scales: {
         x: {
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#94a3b8', font: { size: 10 } }
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 10 },
+            autoSkip: false,
+            maxRotation: 0,
+            callback: function(val) {
+              const label = this.getLabelForValue(val);
+              if (label && (label.includes(':00 AM') || label.includes(':00 PM'))) {
+                return label;
+              }
+              return '';
+            }
+          }
         },
         y: {
           min: 15,
