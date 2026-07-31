@@ -729,6 +729,7 @@ function createTrendChartInstance(canvasId) {
     type: 'line',
     data: { labels: [], datasets: [] },
     options: {
+      animation: false,
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -1092,7 +1093,7 @@ function updateSingleChart(chartInstance, directionType) {
 
   chartInstance.data.labels = labels;
   chartInstance.data.datasets = datasets;
-  chartInstance.update();
+  chartInstance.update('none');
 }
 
 function renderDayOfWeekComparison() {
@@ -1223,6 +1224,7 @@ function initMultiDayChart() {
     type: 'line',
     data: { labels: [], datasets: [] },
     options: {
+      animation: false,
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -1334,7 +1336,7 @@ function updateMultiDayChart() {
 
   appState.multiDayChart.data.labels = labels;
   appState.multiDayChart.data.datasets = datasets;
-  appState.multiDayChart.update();
+  appState.multiDayChart.update('none');
 }
 
 window.setMultiDayDirection = function(dir) {
@@ -1674,11 +1676,15 @@ function setupEventListeners() {
     });
   }
 
+  let smoothingRafId = null;
   const smoothingSlider = document.getElementById('smoothing-slider');
   if (smoothingSlider) {
     smoothingSlider.addEventListener('input', () => {
       updateSmoothingLabel();
-      updateTrendChart();
+      if (smoothingRafId) cancelAnimationFrame(smoothingRafId);
+      smoothingRafId = requestAnimationFrame(() => {
+        updateTrendChart();
+      });
     });
   }
 
