@@ -32,6 +32,11 @@ let appState = {
   showTrafficOverlay: true,
   showIncidentsOverlay: true,
   trendChart: null,
+  morningChart: null,
+  eveningChart: null,
+  multiDayChart: null,
+  multiDayDirection: 'seattle_to_kirkland',
+  activeDays: [1, 2, 3, 4, 5],
   activeTrendWindow: 'polledActual', // 'tomtomBaseline' | 'polledActual' | 'combinedOverlay'
   selectedTimeWindow: 'morning',        // 'morning' | 'evening' | 'byDay'
   selectedDayFilter: 'all'             // 'all' | '1'..'6' | '0'
@@ -1055,6 +1060,248 @@ function updateSingleChart(chartInstance, directionType) {
   chartInstance.update();
 }
 
+function renderDayOfWeekComparison() {
+  const container = document.getElementById('dow-grid-container');
+  const badgeEl = document.getElementById('dow-wfh-badge');
+  if (!container) return;
+
+  const historyRaw = getHistoricalDatabase();
+  const history = historyRaw.map(normalizeHistoryItem);
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayStats = {};
+
+  dayNames.forEach((d, idx) => {
+    dayStats[idx] = { name: d, morningTimes: [], eveningTimes: [] };
+  });
+
+  history.forEach(item => {
+    const m520 = item.morning?.sr520Time || 0;
+    const e520 = item.evening?.sr520Time || 0;
+
+    if (m520 > 5 && dayStats[item.dayIndex]) dayStats[item.dayIndex].morningTimes.push(m520);
+    if (e520 > 5 && dayStats[item.dayIndex]) dayStats[item.dayIndex].eveningTimes.push(e520);
+  });
+
+  const summary = [];
+  dayNames.forEach((dName, idx) => {
+    const s = dayStats[idx];
+    const mAvg = s.morningTimes.length > 0 ? Math.round((s.morningTimes.reduce((a,b)=>a+b,0)/s.morningTimes.length)*10)/10 : null;
+    const eAvg = s.eveningTimes.length > 0 ? Math.round((s.eveningTimes.reduce((a,b)=>a+b,0)/s.eveningTimes.length)*10)/10 : null;
+    const combinedAvg = (mAvg && eAvg) ? Math.round(((mAvg + eAvg) / 2) * 10) / 10 : (mAvg || eAvg || 0);
+
+    summary.push({
+      dayIndex: idx,
+      name: dName,
+      shortName: dName.slice(0, 3),
+      mAvg,
+      eAvg,
+      combinedAvg,
+      count: Math.max(s.morningTimes.length, s.eveningTimes.length)
+    });
+  });
+
+  const activeWeekdays = summary.filter(s => s.count > 0 && s.dayIndex >= 1 && s.dayIndex <= 5);
+  activeWeekdays.sort((a, b) => b.combinedAvg - a.combinedAvg); // Descending (Worst to Best)
+
+  const worstWeekday = activeWeekdays[0];
+  const bestWeekday = activeWeekdays[activeWeekdays.length - 1];
+
+  if (badgeEl && worstWeekday && bestWeekday) {
+    badgeEl.innerHTML = `<span class="wfh-pill">🏡 Best WFH Day: ${worstWeekday.name} (${worstWeekday.combinedAvg}m avg)</span>`;
+  }
+
+  const displayOrder = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
+  container.innerHTML = displayOrder.map(idx => {
+    const item = summary.find(s => s.dayIndex === idx);
+    const isWorst = worstWeekday && item.dayIndex === worstWeekday.dayIndex;
+    const isBest = bestWeekday && item.dayIndex === bestWeekday.dayIndex;
+
+    let classNames = 'dow-day-item';
+    let rankTag = 'No Data';
+
+    if (item.count > 0) {
+      if (isWorst) {
+        classNames += ' worst-day';
+        rankTag = '⚠️ Heaviest';
+      } else if (isBest) {
+        classNames += ' best-day';
+        rankTag = '🟢 Lightest';
+      } else {
+        rankTag = `${item.combinedAvg}m avg`;
+      }
+    }
+
+    return `
+      <div class="${classNames}">
+        <div class="dow-day-name">
+          <span>${item.name}</span>
+          <span class="dow-rank-tag">${rankTag}</span>
+        </div>
+        <div class="dow-metric-row">
+          <span>Seattle ➔ Kirk:</span>
+          <span class="dow-metric-val">${item.mAvg ? `${item.mAvg}m` : '--'}</span>
+        </div>
+        <div class="dow-metric-row">
+          <span>Kirk ➔ Seattle:</span>
+          <span class="dow-metric-val">${item.eAvg ? `${item.eAvg}m` : '--'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function initMultiDayChart() {
+  const canvas = document.getElementById('multiDayChart');
+  if (!canvas) return;
+
+  if (appState.multiDayChart) {
+    appState.multiDayChart.destroy();
+    appState.multiDayChart = null;
+  }
+
+  const ctx = canvas.getContext('2d');
+  appState.multiDayChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: '#94a3b8', font: { size: 11 } } },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} mins`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: (ctx) => {
+              const label = ctx.chart.data.labels[ctx.index];
+              if (label && (label.includes(':00 AM') || label.includes(':00 PM'))) {
+                return 'rgba(255, 255, 255, 0.08)';
+              }
+              return 'transparent';
+            }
+          },
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 10 },
+            autoSkip: false,
+            maxRotation: 0,
+            callback: function(val) {
+              const label = this.getLabelForValue(val);
+              if (label && (label.includes(':00 AM') || label.includes(':00 PM'))) {
+                return label;
+              }
+              return '';
+            }
+          }
+        },
+        y: {
+          min: 15,
+          title: { display: true, text: 'Travel Time (mins)', color: '#94a3b8', font: { size: 10 } },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function updateMultiDayChart() {
+  if (!appState.multiDayChart) initMultiDayChart();
+  if (!appState.multiDayChart) return;
+
+  const historyRaw = getHistoricalDatabase();
+  const history = historyRaw.map(normalizeHistoryItem);
+  const isSeattleToKirkland = (appState.multiDayDirection === 'seattle_to_kirkland');
+
+  const dayConfig = {
+    1: { name: 'Monday', color: '#3b82f6', dash: [] },
+    2: { name: 'Tuesday', color: '#ef4444', dash: [] },
+    3: { name: 'Wednesday', color: '#a855f7', dash: [] },
+    4: { name: 'Thursday', color: '#f59e0b', dash: [] },
+    5: { name: 'Friday', color: '#10b981', dash: [] },
+    6: { name: 'Saturday', color: '#64748b', dash: [4, 4] },
+    0: { name: 'Sunday', color: '#94a3b8', dash: [4, 4] }
+  };
+
+  const sliderVal = parseInt(document.getElementById('smoothing-slider')?.value ?? '2', 10);
+  const windowSizes = [1, 3, 5, 7, 9, 11];
+  const windowSize = windowSizes[sliderVal] ?? 5;
+  const isSmooth = windowSize > 1;
+  const lineTension = sliderVal === 0 ? 0.0 : 0.32 + (sliderVal * 0.03);
+
+  const datasets = [];
+  let labels = [];
+
+  const daysToRender = [1, 2, 3, 4, 5, 6, 0].filter(d => appState.activeDays.includes(d));
+
+  daysToRender.forEach(dayIdx => {
+    const cfg = dayConfig[dayIdx];
+    if (!cfg) return;
+
+    const dayHistory = history.filter(item => {
+      if (String(item.dayIndex) !== String(dayIdx)) return false;
+      const s520 = isSeattleToKirkland ? (item.morning?.sr520Time || 0) : (item.evening?.sr520Time || 0);
+      return s520 > 5 && item.hour >= 0 && item.hour < 24;
+    });
+
+    const agg = aggregateHistoryByTimeBucket(dayHistory, isSeattleToKirkland);
+    if (agg.labels.length > 0) {
+      if (agg.labels.length > labels.length) labels = agg.labels;
+      const data = isSmooth ? applyMovingAverage(agg.rawSR520, windowSize) : agg.rawSR520;
+
+      datasets.push({
+        label: `${cfg.name} (${isSeattleToKirkland ? 'Seattle ➔ Kirk' : 'Kirk ➔ Seattle'})`,
+        data: data,
+        borderColor: cfg.color,
+        backgroundColor: 'transparent',
+        borderWidth: 2.8,
+        borderDash: cfg.dash,
+        tension: lineTension,
+        cubicInterpolationMode: 'monotone',
+        fill: false,
+        pointRadius: 2
+      });
+    }
+  });
+
+  appState.multiDayChart.data.labels = labels;
+  appState.multiDayChart.data.datasets = datasets;
+  appState.multiDayChart.update();
+}
+
+window.setMultiDayDirection = function(dir) {
+  appState.multiDayDirection = dir;
+  document.getElementById('btn-md-morning')?.classList.toggle('active', dir === 'seattle_to_kirkland');
+  document.getElementById('btn-md-evening')?.classList.toggle('active', dir === 'kirkland_to_seattle');
+  updateMultiDayChart();
+};
+
+window.toggleMultiDayPill = function(dayIdx) {
+  const idx = parseInt(dayIdx, 10);
+  if (appState.activeDays.includes(idx)) {
+    if (appState.activeDays.length > 1) {
+      appState.activeDays = appState.activeDays.filter(d => d !== idx);
+    }
+  } else {
+    appState.activeDays.push(idx);
+  }
+  
+  document.querySelectorAll('.day-pill').forEach(pill => {
+    const pDay = parseInt(pill.getAttribute('data-day'), 10);
+    pill.classList.toggle('active', appState.activeDays.includes(pDay));
+  });
+
+  updateMultiDayChart();
+};
+
 function updateTrendChart() {
   if (!appState.morningChart && !appState.eveningChart) {
     initChart();
@@ -1063,6 +1310,8 @@ function updateTrendChart() {
   updateSingleChart(appState.morningChart, 'seattle_to_kirkland');
   updateSingleChart(appState.eveningChart, 'kirkland_to_seattle');
   updateDataPointsCount();
+  renderDayOfWeekComparison();
+  updateMultiDayChart();
 }
 
 async function saveLiveSnapshot() {

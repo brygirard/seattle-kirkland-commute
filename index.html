@@ -137,6 +137,32 @@
             </div>
           </div>
 
+          <!-- Advanced Multi-Day Layered Traffic Comparison Section -->
+          <div class="multi-day-card" id="multi-day-card">
+            <div class="multi-day-header">
+              <div class="multi-day-title-group">
+                <span class="multi-day-title">📊 Multi-Day Layered Traffic Comparison</span>
+                <span class="multi-day-subtitle">Compare Monday vs Tuesday vs Wednesday vs Thursday vs Friday curves stacked on top of each other</span>
+              </div>
+              <div class="multi-day-controls">
+                <div class="direction-tabs">
+                  <button class="dir-tab active" id="btn-md-morning" onclick="setMultiDayDirection('seattle_to_kirkland')">🚗 Seattle ➔ Kirkland</button>
+                  <button class="dir-tab" id="btn-md-evening" onclick="setMultiDayDirection('kirkland_to_seattle')">🏡 Kirkland ➔ Seattle</button>
+                </div>
+                <div class="day-toggle-pills" id="day-toggle-pills">
+                  <button class="day-pill mon active" data-day="1" onclick="toggleMultiDayPill(1)">Mon</button>
+                  <button class="day-pill tue active" data-day="2" onclick="toggleMultiDayPill(2)">Tue</button>
+                  <button class="day-pill wed active" data-day="3" onclick="toggleMultiDayPill(3)">Wed</button>
+                  <button class="day-pill thu active" data-day="4" onclick="toggleMultiDayPill(4)">Thu</button>
+                  <button class="day-pill fri active" data-day="5" onclick="toggleMultiDayPill(5)">Fri</button>
+                </div>
+              </div>
+            </div>
+            <div class="multi-day-chart-container">
+              <canvas id="multiDayChart"></canvas>
+            </div>
+          </div>
+
           <!-- Controls Bar -->
           <div class="day-filter-bar" id="day-filter-bar">
             <div class="filter-row">

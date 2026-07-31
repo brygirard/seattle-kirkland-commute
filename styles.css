@@ -1075,11 +1075,99 @@ body {
   margin: 6px 0;
 }
 
-.modal-footer {
-  padding: 14px 20px;
-  border-top: 1px solid var(--border-color);
+/* --- MULTI-DAY LAYERED COMPARISON CARD --- */
+.multi-day-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin: 18px 0;
+}
+
+.multi-day-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.multi-day-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: block;
+}
+
+.multi-day-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 2px;
+}
+
+.multi-day-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.direction-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.dir-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dir-tab.active {
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.day-toggle-pills {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.day-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.day-pill.active.mon { background: rgba(59, 130, 246, 0.25); border-color: #3b82f6; color: #60a5fa; }
+.day-pill.active.tue { background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #f87171; }
+.day-pill.active.wed { background: rgba(168, 85, 247, 0.25); border-color: #a855f7; color: #c084fc; }
+.day-pill.active.thu { background: rgba(245, 158, 11, 0.25); border-color: #f59e0b; color: #fbbf24; }
+.day-pill.active.fri { background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #34d399; }
+
+.multi-day-chart-container {
+  height: 380px;
+  width: 100%;
+  position: relative;
 }
 
 /* --- RESPONSIVE BREAKPOINTS --- */
