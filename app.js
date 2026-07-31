@@ -1151,6 +1151,29 @@ function renderDayOfWeekComparison() {
   }).join('');
 }
 
+function applyMovingAverage(arr, windowSize = 3) {
+  if (!Array.isArray(arr) || arr.length <= 2) return arr;
+  const result = [];
+  const half = Math.floor(windowSize / 2);
+
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === null || arr[i] === undefined) {
+      result.push(null);
+      continue;
+    }
+    let sum = 0;
+    let count = 0;
+    for (let j = i - half; j <= i + half; j++) {
+      if (j >= 0 && j < arr.length && typeof arr[j] === 'number' && arr[j] !== null) {
+        sum += arr[j];
+        count++;
+      }
+    }
+    result.push(count > 0 ? Math.round((sum / count) * 10) / 10 : arr[i]);
+  }
+  return result;
+}
+
 function initMultiDayChart() {
   const canvas = document.getElementById('multiDayChart');
   if (!canvas) return;
@@ -1168,7 +1191,7 @@ function initMultiDayChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, labels: { color: '#94a3b8', font: { size: 11 } } },
+        legend: { display: false },
         tooltip: {
           mode: 'index',
           intersect: false,
@@ -1222,11 +1245,11 @@ function updateMultiDayChart() {
   const isSeattleToKirkland = (appState.multiDayDirection === 'seattle_to_kirkland');
 
   const dayConfig = {
-    1: { name: 'Monday', color: '#3b82f6', dash: [] },
-    2: { name: 'Tuesday', color: '#ef4444', dash: [] },
-    3: { name: 'Wednesday', color: '#a855f7', dash: [] },
-    4: { name: 'Thursday', color: '#f59e0b', dash: [] },
-    5: { name: 'Friday', color: '#10b981', dash: [] },
+    1: { name: 'Monday', color: '#38bdf8', dash: [] },   // Electric Sky Blue
+    2: { name: 'Tuesday', color: '#f43f5e', dash: [] },  // Rose Crimson
+    3: { name: 'Wednesday', color: '#c084fc', dash: [] },// Neon Violet
+    4: { name: 'Thursday', color: '#fbbf24', dash: [] }, // Golden Amber
+    5: { name: 'Friday', color: '#34d399', dash: [] },   // Emerald Mint
     6: { name: 'Saturday', color: '#64748b', dash: [4, 4] },
     0: { name: 'Sunday', color: '#94a3b8', dash: [4, 4] }
   };
@@ -1258,16 +1281,18 @@ function updateMultiDayChart() {
       const data = isSmooth ? applyMovingAverage(agg.rawSR520, windowSize) : agg.rawSR520;
 
       datasets.push({
-        label: `${cfg.name} (${isSeattleToKirkland ? 'Seattle ➔ Kirk' : 'Kirk ➔ Seattle'})`,
+        label: `${cfg.name}`,
         data: data,
         borderColor: cfg.color,
         backgroundColor: 'transparent',
-        borderWidth: 2.8,
+        borderWidth: 2,
         borderDash: cfg.dash,
         tension: lineTension,
         cubicInterpolationMode: 'monotone',
         fill: false,
-        pointRadius: 2
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        spanGaps: false
       });
     }
   });

@@ -1158,11 +1158,11 @@ body {
   transition: all 0.2s ease;
 }
 
-.day-pill.active.mon { background: rgba(59, 130, 246, 0.25); border-color: #3b82f6; color: #60a5fa; }
-.day-pill.active.tue { background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #f87171; }
-.day-pill.active.wed { background: rgba(168, 85, 247, 0.25); border-color: #a855f7; color: #c084fc; }
-.day-pill.active.thu { background: rgba(245, 158, 11, 0.25); border-color: #f59e0b; color: #fbbf24; }
-.day-pill.active.fri { background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #34d399; }
+.day-pill.active.mon { background: rgba(56, 189, 248, 0.15); border-color: #38bdf8; color: #38bdf8; }
+.day-pill.active.tue { background: rgba(244, 63, 94, 0.15); border-color: #f43f5e; color: #f43f5e; }
+.day-pill.active.wed { background: rgba(192, 132, 252, 0.15); border-color: #c084fc; color: #c084fc; }
+.day-pill.active.thu { background: rgba(251, 191, 36, 0.15); border-color: #fbbf24; color: #fbbf24; }
+.day-pill.active.fri { background: rgba(52, 211, 153, 0.15); border-color: #34d399; color: #34d399; }
 
 .multi-day-chart-container {
   height: 380px;
