@@ -916,7 +916,9 @@ function updateSingleChart(chartInstance, directionType) {
         tension: lineTension,
         cubicInterpolationMode: 'monotone',
         fill: true,
-        pointRadius: 3
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        spanGaps: false
       },
       {
         label: `TomTom Baseline I-90 (${dirLabel})`,
@@ -928,7 +930,9 @@ function updateSingleChart(chartInstance, directionType) {
         tension: lineTension,
         cubicInterpolationMode: 'monotone',
         fill: false,
-        pointRadius: 3
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        spanGaps: false
       }
     ];
   } else if (mode === 'polledActual') {
@@ -947,23 +951,27 @@ function updateSingleChart(chartInstance, directionType) {
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
-          borderWidth: 3,
+          borderWidth: 2.5,
           tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: true,
-          pointRadius: agg.labels.length > 50 ? 1.5 : 3
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          spanGaps: false
         },
         {
           label: `Polled Actual I-90 (${dirLabel} - ${titleSuffix})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
-          borderWidth: 2.5,
-          borderDash: [3, 3],
+          borderWidth: 2.2,
+          borderDash: [4, 4],
           tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: agg.labels.length > 50 ? 1.5 : 3
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          spanGaps: false
         }
       ];
     } else {
@@ -1000,8 +1008,11 @@ function updateSingleChart(chartInstance, directionType) {
           borderWidth: 2,
           borderDash: [4, 4],
           tension: lineTension,
+          cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: 0
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          spanGaps: false
         },
         {
           label: 'TomTom Historic I-90',
@@ -1010,31 +1021,38 @@ function updateSingleChart(chartInstance, directionType) {
           borderWidth: 2,
           borderDash: [4, 4],
           tension: lineTension,
+          cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: 0
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          spanGaps: false
         },
         {
           label: `Polled Actual SR-520 (${dirLabel} - ${titleSuffix})`,
           data: actualSR520,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
-          borderWidth: 3,
+          borderWidth: 2.5,
           tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: true,
-          pointRadius: 3
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          spanGaps: false
         },
         {
           label: `Polled Actual I-90 (${dirLabel} - ${titleSuffix})`,
           data: actualI90,
           borderColor: '#f59e0b',
           backgroundColor: 'transparent',
-          borderWidth: 2.5,
-          borderDash: [3, 3],
+          borderWidth: 2.2,
+          borderDash: [4, 4],
           tension: lineTension,
           cubicInterpolationMode: 'monotone',
           fill: false,
-          pointRadius: 3
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          spanGaps: false
         }
       ];
     } else {
