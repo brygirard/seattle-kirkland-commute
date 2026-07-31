@@ -173,6 +173,7 @@ async function syncCloudData() {
     }
 
     localData.sort((a, b) => (a?.timestamp || 0) - (b?.timestamp || 0));
+    invalidateHistoryCache();
     localStorage.setItem('commute_historical_db', JSON.stringify(localData));
     updateDataPointsCount();
     updateTrendChart();
@@ -647,20 +648,39 @@ function initChart() {
   });
 }
 
-// Normalize entry for rendering using robust Intl.DateTimeFormat (12-hour AM/PM timeStr)
+const LA_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  weekday: 'long',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+});
+
+const LA_H24_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  hour: 'numeric',
+  hourCycle: 'h23'
+});
+
+let cachedNormalizedHistory = null;
+
+function invalidateHistoryCache() {
+  cachedNormalizedHistory = null;
+}
+
+function getNormalizedHistory() {
+  if (cachedNormalizedHistory) return cachedNormalizedHistory;
+  const raw = getHistoricalDatabase();
+  cachedNormalizedHistory = raw.map(normalizeHistoryItem);
+  return cachedNormalizedHistory;
+}
+
+// Normalize entry for rendering using static singleton formatters
 function normalizeHistoryItem(item) {
   const ts = item.timestamp || Date.now();
   const d = new Date(ts);
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    weekday: 'long',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-  
-  const parts = formatter.formatToParts(d);
+  const parts = LA_FORMATTER.formatToParts(d);
   let dayOfWeek = 'Monday';
   let hourStr = '12';
   let minStr = '00';
@@ -676,12 +696,7 @@ function normalizeHistoryItem(item) {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayIndex = dayNames.indexOf(dayOfWeek);
 
-  const h24Formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    hour: 'numeric',
-    hourCycle: 'h23'
-  });
-  const h24Parts = h24Formatter.formatToParts(d);
+  const h24Parts = LA_H24_FORMATTER.formatToParts(d);
   const hourPart = h24Parts.find(p => p.type === 'hour');
   const hour = hourPart ? parseInt(hourPart.value, 10) % 24 : d.getHours();
 
@@ -879,8 +894,7 @@ function updateSingleChart(chartInstance, directionType) {
   const isSeattleToKirkland = (directionType === 'seattle_to_kirkland');
   const dirLabel = isSeattleToKirkland ? 'Seattle ➔ Kirkland' : 'Kirkland ➔ Seattle';
 
-  const historyRaw = getHistoricalDatabase();
-  const history = historyRaw.map(normalizeHistoryItem);
+  const history = getNormalizedHistory();
 
   let filteredHistory = history.filter(item => {
     const s520 = isSeattleToKirkland ? (item.morning?.sr520Time || 0) : (item.evening?.sr520Time || 0);
@@ -1101,8 +1115,7 @@ function renderDayOfWeekComparison() {
   const badgeEl = document.getElementById('dow-wfh-badge');
   if (!container) return;
 
-  const historyRaw = getHistoricalDatabase();
-  const history = historyRaw.map(normalizeHistoryItem);
+  const history = getNormalizedHistory();
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayStats = {};
@@ -1277,8 +1290,7 @@ function updateMultiDayChart() {
   if (!appState.multiDayChart) initMultiDayChart();
   if (!appState.multiDayChart) return;
 
-  const historyRaw = getHistoricalDatabase();
-  const history = historyRaw.map(normalizeHistoryItem);
+  const history = getNormalizedHistory();
   const isSeattleToKirkland = (appState.multiDayDirection === 'seattle_to_kirkland');
 
   const dayConfig = {
@@ -1419,6 +1431,7 @@ async function saveLiveSnapshot() {
   
   if (history.length > 5000) history.shift();
 
+  invalidateHistoryCache();
   localStorage.setItem('commute_historical_db', JSON.stringify(history));
   updateDataPointsCount();
 }
@@ -1676,15 +1689,15 @@ function setupEventListeners() {
     });
   }
 
-  let smoothingRafId = null;
+  let smoothingTimer = null;
   const smoothingSlider = document.getElementById('smoothing-slider');
   if (smoothingSlider) {
     smoothingSlider.addEventListener('input', () => {
       updateSmoothingLabel();
-      if (smoothingRafId) cancelAnimationFrame(smoothingRafId);
-      smoothingRafId = requestAnimationFrame(() => {
+      if (smoothingTimer) clearTimeout(smoothingTimer);
+      smoothingTimer = setTimeout(() => {
         updateTrendChart();
-      });
+      }, 60);
     });
   }
 
