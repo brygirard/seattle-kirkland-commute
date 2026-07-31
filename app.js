@@ -14,6 +14,14 @@ const CONFIG = {
   minManualCooldownMs: 10000
 };
 
+function getCurrentDayFilter() {
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' });
+  const dayName = formatter.formatToParts(d).find(p => p.type === 'weekday')?.value || 'Monday';
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return String(dayNames.indexOf(dayName));
+}
+
 let appState = {
   routes: [],
   selectedRouteIndex: 0,
@@ -22,6 +30,7 @@ let appState = {
   lastManualClickTime: 0,
   refreshTimer: null,
   isTabVisible: true,
+  currentWeather: null,
   map: null,
   mapLayers: {
     trafficFlow: null,
@@ -39,7 +48,7 @@ let appState = {
   activeDays: [1, 2, 3, 4, 5],
   activeTrendWindow: 'polledActual', // 'tomtomBaseline' | 'polledActual' | 'combinedOverlay'
   selectedTimeWindow: 'morning',        // 'morning' | 'evening' | 'byDay'
-  selectedDayFilter: 'all'             // 'all' | '1'..'6' | '0'
+  selectedDayFilter: getCurrentDayFilter() // Defaults to current local day!
 };
 
 // --- DOM Elements ---
@@ -92,6 +101,9 @@ const el = {
 
 // --- Initializer ---
 document.addEventListener('DOMContentLoaded', async () => {
+  if (el.filterDayOfWeek) {
+    el.filterDayOfWeek.value = appState.selectedDayFilter;
+  }
   initMap();
   initChart();
   setupEventListeners();
