@@ -803,12 +803,26 @@ function getTomTomBaselineForTime(hour, minute, isSeattleToKirkland, dayFilter) 
 }
 
 function aggregateHistoryByTimeBucket(filteredHistory, isSeattleToKirkland) {
-  const buckets = {};
+  const masterKeys = [];
+  const masterLabels = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      const k = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      masterKeys.push(k);
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayH = (h % 12) || 12;
+      masterLabels.push(`${displayH}:${String(m).padStart(2, '0')} ${period}`);
+    }
+  }
 
+  const buckets = {};
   filteredHistory.forEach(item => {
     if (item.hour >= 0 && item.hour < 24) {
-      const parts = item.timeStr.split(':');
-      const min = parseInt((parts[1] || '0').split(' ')[0], 10) || 0;
+      const parts = item.timeStr ? item.timeStr.split(':') : [];
+      let min = 0;
+      if (parts.length > 1) {
+        min = parseInt(parts[1].split(' ')[0], 10) || 0;
+      }
       const roundedMin = Math.floor(min / 5) * 5;
       const key = `${String(item.hour).padStart(2, '0')}:${String(roundedMin).padStart(2, '0')}`;
 
@@ -822,28 +836,19 @@ function aggregateHistoryByTimeBucket(filteredHistory, isSeattleToKirkland) {
     }
   });
 
-  const sortedKeys = Object.keys(buckets).sort();
-  const labels = [];
-  const rawSR520 = [];
-  const rawI90 = [];
-
-  sortedKeys.forEach(k => {
-    const [h, m] = k.split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const displayH = (h % 12) || 12;
-    const timeStr = `${displayH}:${String(m).padStart(2, '0')} ${period}`;
-    labels.push(timeStr);
-
-    const sList = buckets[k].sr520;
-    const iList = buckets[k].i90;
-    const sAvg = sList.length > 0 ? Math.round((sList.reduce((a,b)=>a+b,0)/sList.length)*10)/10 : null;
-    const iAvg = iList.length > 0 ? Math.round((iList.reduce((a,b)=>a+b,0)/iList.length)*10)/10 : null;
-
-    rawSR520.push(sAvg);
-    rawI90.push(iAvg);
+  const rawSR520 = masterKeys.map(k => {
+    const list = buckets[k]?.sr520;
+    if (!list || list.length === 0) return null;
+    return Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10;
   });
 
-  return { labels, rawSR520, rawI90, keys: sortedKeys };
+  const rawI90 = masterKeys.map(k => {
+    const list = buckets[k]?.i90;
+    if (!list || list.length === 0) return null;
+    return Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10;
+  });
+
+  return { labels: masterLabels, rawSR520, rawI90, keys: masterKeys };
 }
 
 function updateSingleChart(chartInstance, directionType) {
