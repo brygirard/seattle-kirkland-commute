@@ -1,0 +1,28 @@
+[
+  {
+    "timestamp": 1785542419604,
+    "morning": {
+      "sr520Time": 31,
+      "sr520Delay": 5,
+      "sr520SpeedMph": 22,
+      "i90Time": 47,
+      "i90Delay": 12,
+      "i90SpeedMph": 22
+    },
+    "evening": {
+      "sr520Time": 42,
+      "sr520Delay": 16,
+      "sr520SpeedMph": 16,
+      "i90Time": 56,
+      "i90Delay": 21,
+      "i90SpeedMph": 18
+    },
+    "weather": {
+      "temp": 79,
+      "rain": 0,
+      "code": 0
+    },
+    "toll520": 4.9,
+    "incidents": 234
+  }
+]
