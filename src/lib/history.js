@@ -67,11 +67,11 @@ export function saveHistoricalDatabase(history) {
 
 export async function syncCloudData() {
   try {
-    let filesToFetch = ['/data/history_2026-07.json', '/data/history_2026_07.json'];
+    let filesToFetch = ['./data/history_2026-07.json', './data/history_2026-08.json'];
     try {
-      const index = await fetch('/data/index.json').then(r => r.ok ? r.json() : []);
+      const index = await fetch('./data/index.json').then(r => r.ok ? r.json() : []);
       if (Array.isArray(index) && index.length > 0) {
-        filesToFetch = index.map(f => `/data/${f}`);
+        filesToFetch = index.map(f => `./data/${f}`);
       }
     } catch (e) {
       console.warn("Index fetch failed, using default files", e);
