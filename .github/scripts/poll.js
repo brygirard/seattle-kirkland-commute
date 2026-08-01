@@ -1,5 +1,9 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const apiKey = process.env.TOMTOM_API_KEY || 'QuSopbXau96swtFznGbYJV74BYwuZAML';
 
@@ -117,16 +121,17 @@ async function pollTraffic() {
     const now = new Date();
     const tollRate = getSR520TollRate(now);
 
-    const [morningData, eveningData, weatherData, incidentRes] = await Promise.all([
-      fetchRouteDataWithRetry(seattleCoords, kirklandCoords, 'Morning (Seattle->Kirkland)'),
-      fetchRouteDataWithRetry(kirklandCoords, seattleCoords, 'Evening (Kirkland->Seattle)'),
-      fetchWeather(),
-      fetch(incidentUrl).then(r => r.json()).catch(() => ({ incidents: [] }))
-    ]);
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+    const morningData = await fetchRouteDataWithRetry(seattleCoords, kirklandCoords, 'Morning (Seattle->Kirkland)');
+    await delay(500);
+    const eveningData = await fetchRouteDataWithRetry(kirklandCoords, seattleCoords, 'Evening (Kirkland->Seattle)');
+    await delay(500);
+    const weatherData = await fetchWeather();
+    const incidentRes = await fetch(incidentUrl).then(r => r.json()).catch(() => ({ incidents: [] }));
 
     // REJECT BAD SNAPSHOTS AT CRON LEVEL: Skip write if after 3 retries data is still invalid
     if (!isValidRouteData(morningData) || !isValidRouteData(eveningData)) {
-      console.error('[Cloud Poller REJECTED] Snapshot failed validation after 3 retries (SR520 < 18m or I90 < 20m). Skipping write to avoid dataset contamination.');
+      console.error('[Cloud Poller REJECTED] Snapshot failed validation after 3 retries (SR520 <= 5m or I90 <= 5m). Skipping write to avoid dataset contamination.');
       process.exit(0);
     }
 

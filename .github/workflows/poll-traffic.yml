@@ -31,4 +31,4 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
           git status
-          git diff-index --quiet HEAD || (git commit -m "auto: update commute traffic log [skip ci]" && git push)
+          git diff-index --quiet HEAD || (git commit -m "auto: update commute traffic log [skip ci]" && git pull --rebase origin main && git push)
