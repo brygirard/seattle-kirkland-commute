@@ -68,11 +68,8 @@ export function saveHistoricalDatabase(history) {
 export async function syncCloudData() {
   try {
     let filesToFetch = ['./data/history_2026-07.json', './data/history_2026-08.json'];
-    const isDist = window.location.pathname.includes('/dist/');
-    
     try {
-      const indexPath = isDist ? '../data/index.json' : './data/index.json';
-      const index = await fetch(indexPath).then(r => r.ok ? r.json() : []);
+      const index = await fetch('./data/index.json').then(r => r.ok ? r.json() : []);
       if (Array.isArray(index) && index.length > 0) {
         filesToFetch = index.map(f => `./data/${f}`);
       }
@@ -92,8 +89,7 @@ export async function syncCloudData() {
 
     for (const fileUrl of filesToFetch) {
       try {
-        const resolvedPath = isDist ? fileUrl.replace('./data/', '../data/') : fileUrl;
-        const res = await fetch(resolvedPath);
+        const res = await fetch(fileUrl);
         if (res.ok) {
           const cloudData = await res.json();
           if (Array.isArray(cloudData)) {

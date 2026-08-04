@@ -23,38 +23,15 @@ function serveDataPlugin() {
   }
 }
 
-// Custom plugin to serve index.dev.html during development instead of the redirect index.html
-function devHtmlPlugin() {
-  return {
-    name: 'dev-html',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const parsedUrl = new URL(req.url, 'http://localhost');
-        if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html') {
-          const filePath = path.resolve(import.meta.dirname, 'index.dev.html');
-          res.setHeader('Content-Type', 'text/html');
-          res.end(fs.readFileSync(filePath, 'utf-8'));
-          return;
-        }
-        next();
-      });
-    }
-  }
-}
-
 // https://vitejs.dev/config/
 export default defineConfig({
   base: './',
   plugins: [
-    devHtmlPlugin(),
     tailwindcss(),
     react(),
     serveDataPlugin()
   ],
   build: {
     outDir: 'dist',
-    rollupOptions: {
-      input: 'index.dev.html'
-    }
   }
 })
