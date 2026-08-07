@@ -12,6 +12,13 @@ export const LA_H24_FORMATTER = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23'
 });
 
+export const LA_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric'
+});
+
 export function normalizeHistoryItem(item) {
   const ts = item.timestamp || Date.now();
   const d = new Date(ts);
@@ -31,6 +38,8 @@ export function normalizeHistoryItem(item) {
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayIndex = dayNames.indexOf(dayOfWeek);
+  
+  const dateStr = LA_DATE_FORMATTER.format(d);
 
   const h24Parts = LA_H24_FORMATTER.formatToParts(d);
   const hourPart = h24Parts.find(p => p.type === 'hour');
@@ -43,6 +52,7 @@ export function normalizeHistoryItem(item) {
 
   return {
     timestamp: ts,
+    dateStr,
     dayOfWeek,
     dayIndex,
     timeStr,

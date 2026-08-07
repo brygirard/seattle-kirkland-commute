@@ -5,6 +5,7 @@ import RouteCards from './components/RouteCards';
 import InteractiveMap from './components/InteractiveMap';
 import DirectionTrendChart from './components/DirectionTrendChart';
 import MultiDayChart from './components/MultiDayChart';
+import DateComparisonChart from './components/DateComparisonChart';
 import { useCommuteState } from './hooks/useCommuteState';
 import { Settings as SettingsIcon, X } from 'lucide-react';
 
@@ -65,6 +66,7 @@ function SettingsModal({ config, updateConfig, onClose }) {
 function App() {
   const state = useCommuteState();
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState('trend'); // 'trend', 'comparison', 'calendar'
 
   return (
     <div className="min-h-screen bg-slate-900 p-4 md:p-8 font-sans">
@@ -91,28 +93,29 @@ function App() {
           </div>
         ) : state.routeData.seattle_to_kirkland ? (
           <>
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 mb-8 gap-4">
-              
-              {/* Left Side: Single Day Controls */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-slate-300">Filter Day:</span>
-                  <select
-                    value={state.config.dayFilter}
-                    onChange={(e) => state.updateConfig({ dayFilter: e.target.value })}
-                    className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2"
-                  >
-                    <option value="all">All Days</option>
-                    <option value="Monday">Monday</option>
-                    <option value="Tuesday">Tuesday</option>
-                    <option value="Wednesday">Wednesday</option>
-                    <option value="Thursday">Thursday</option>
-                    <option value="Friday">Friday</option>
-                    <option value="Saturday">Saturday</option>
-                    <option value="Sunday">Sunday</option>
-                  </select>
-                </div>
+            <div className="flex border-b border-slate-700/50 mb-6 space-x-2 md:space-x-4 overflow-x-auto pb-1">
+              <button 
+                onClick={() => setActiveTab('trend')} 
+                className={`py-2 px-3 md:px-4 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === 'trend' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'}`}
+              >
+                Commute Trend
+              </button>
+              <button 
+                onClick={() => setActiveTab('comparison')} 
+                className={`py-2 px-3 md:px-4 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === 'comparison' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'}`}
+              >
+                Full Comparison
+              </button>
+              <button 
+                onClick={() => setActiveTab('calendar')} 
+                className={`py-2 px-3 md:px-4 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === 'calendar' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'}`}
+              >
+                Calendar Date Comparison
+              </button>
+            </div>
 
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 mb-8 gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-slate-300">Global Smoothing:</span>
                   <input 
@@ -124,62 +127,112 @@ function App() {
                     className="w-24 sm:w-32 accent-emerald-500"
                   />
                 </div>
+                
+                {activeTab === 'trend' && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-slate-300">Filter Day:</span>
+                    <select
+                      value={state.config.dayFilter}
+                      onChange={(e) => state.updateConfig({ dayFilter: e.target.value })}
+                      className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2"
+                    >
+                      <option value="all">All Days</option>
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                      <option value="Saturday">Saturday</option>
+                      <option value="Sunday">Sunday</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
-              {/* Right Side: Multi Day Comparison Controls */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-300">Compare Days:</span>
-                <div className="flex bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden flex-wrap">
-                  {[0, 1, 2, 3, 4, 5, 6].map(day => {
-                    const dayNamesFull = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                    return (
-                      <button
-                        key={day}
-                        onClick={() => state.toggleMultiDay(day)}
-                        className={`px-2 md:px-3 py-1.5 text-xs font-medium transition-colors border-r border-slate-700/50 last:border-0 ${
-                          state.multiDayActive.includes(day)
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'text-slate-400 hover:bg-slate-700 hover:text-slate-300'
-                        }`}
-                      >
-                        {dayNamesFull[day]}
-                      </button>
-                    )
-                  })}
+              {activeTab === 'comparison' && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-slate-300">Compare Days:</span>
+                  <div className="flex bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden flex-wrap">
+                    {[0, 1, 2, 3, 4, 5, 6].map(day => {
+                      const dayNamesFull = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => state.toggleMultiDay(day)}
+                          className={`px-2 md:px-3 py-1.5 text-xs font-medium transition-colors border-r border-slate-700/50 last:border-0 ${
+                            state.multiDayActive.includes(day)
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'text-slate-400 hover:bg-slate-700 hover:text-slate-300'
+                          }`}
+                        >
+                          {dayNamesFull[day]}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-              <DirectionTrendChart 
-                history={state.history} 
-                config={state.config} 
-                updateConfig={state.updateConfig}
-                direction="seattle_to_kirkland"
-              />
-              <MultiDayChart 
-                history={state.history}
-                multiDayActive={state.multiDayActive}
-                toggleMultiDay={state.toggleMultiDay}
-                direction="seattle_to_kirkland"
-                config={state.config}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-              <DirectionTrendChart 
-                history={state.history} 
-                config={state.config} 
-                updateConfig={state.updateConfig}
-                direction="kirkland_to_seattle"
-              />
-              <MultiDayChart 
-                history={state.history}
-                multiDayActive={state.multiDayActive}
-                toggleMultiDay={state.toggleMultiDay}
-                direction="kirkland_to_seattle"
-                config={state.config}
-              />
+            <div className="grid grid-cols-1 gap-8 mb-8">
+              {activeTab === 'trend' && (
+                <>
+                  <DirectionTrendChart 
+                    history={state.history} 
+                    config={state.config} 
+                    updateConfig={state.updateConfig}
+                    direction="seattle_to_kirkland"
+                  />
+                  <DirectionTrendChart 
+                    history={state.history} 
+                    config={state.config} 
+                    updateConfig={state.updateConfig}
+                    direction="kirkland_to_seattle"
+                  />
+                </>
+              )}
+              {activeTab === 'comparison' && (
+                <>
+                  <MultiDayChart 
+                    history={state.history}
+                    multiDayActive={state.multiDayActive}
+                    toggleMultiDay={state.toggleMultiDay}
+                    direction="seattle_to_kirkland"
+                    config={state.config}
+                  />
+                  <MultiDayChart 
+                    history={state.history}
+                    multiDayActive={state.multiDayActive}
+                    toggleMultiDay={state.toggleMultiDay}
+                    direction="kirkland_to_seattle"
+                    config={state.config}
+                  />
+                </>
+              )}
+              {activeTab === 'calendar' && (
+                <>
+                  <DateComparisonChart 
+                    history={state.history}
+                    date1={state.compareDate1}
+                    date2={state.compareDate2}
+                    setDate1={state.setCompareDate1}
+                    setDate2={state.setCompareDate2}
+                    uniqueDates={state.uniqueDates}
+                    direction="seattle_to_kirkland"
+                    config={state.config}
+                  />
+                  <DateComparisonChart 
+                    history={state.history}
+                    date1={state.compareDate1}
+                    date2={state.compareDate2}
+                    setDate1={state.setCompareDate1}
+                    setDate2={state.setCompareDate2}
+                    uniqueDates={state.uniqueDates}
+                    direction="kirkland_to_seattle"
+                    config={state.config}
+                  />
+                </>
+              )}
             </div>
 
             <MetricCards 

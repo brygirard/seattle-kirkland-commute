@@ -5,6 +5,10 @@ on:
   repository_dispatch: # Triggered every 5 minutes by Cron-Job.org webhook
     types: [poll_traffic]
 
+concurrency:
+  group: "traffic-poller"
+  cancel-in-progress: false
+
 jobs:
   poll-and-commit:
     runs-on: ubuntu-latest

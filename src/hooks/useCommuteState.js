@@ -25,6 +25,9 @@ export function useCommuteState() {
   const [rawHistory, setRawHistory] = useState([]);
   const [multiDayActive, setMultiDayActive] = useState([0, 1, 2, 3, 4, 5, 6]);
 
+  const [compareDate1, setCompareDate1] = useState(null);
+  const [compareDate2, setCompareDate2] = useState(null);
+
   // Load history on mount
   useEffect(() => {
     setRawHistory(getHistoricalDatabase());
@@ -34,6 +37,22 @@ export function useCommuteState() {
   const history = useMemo(() => {
     return rawHistory.map(normalizeHistoryItem);
   }, [rawHistory]);
+
+  const uniqueDates = useMemo(() => {
+    const dates = new Set(history.map(h => h.dateStr));
+    return Array.from(dates);
+  }, [history]);
+
+  useEffect(() => {
+    if (uniqueDates.length > 0) {
+      if (!compareDate1 && !uniqueDates.includes(compareDate1)) {
+        setCompareDate1(uniqueDates[uniqueDates.length - 1]);
+      }
+      if (!compareDate2 && !uniqueDates.includes(compareDate2)) {
+        setCompareDate2(uniqueDates.length > 1 ? uniqueDates[uniqueDates.length - 2] : uniqueDates[0]);
+      }
+    }
+  }, [uniqueDates, compareDate1, compareDate2]);
 
   const updateConfig = (newConfig) => {
     setConfig(prev => ({ ...prev, ...newConfig }));
@@ -136,6 +155,11 @@ export function useCommuteState() {
     history,
     multiDayActive,
     toggleMultiDay,
+    uniqueDates,
+    compareDate1,
+    setCompareDate1,
+    compareDate2,
+    setCompareDate2,
     refresh: fetchLiveTraffic
   };
 }
