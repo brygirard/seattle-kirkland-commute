@@ -2,8 +2,26 @@ import React, { useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import { aggregateHistoryByTimeBucket, applyMovingAverage } from '../lib/utils';
 import { Calendar } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 export default function DateComparisonChart({ history, date1, date2, setDate1, setDate2, uniqueDates, direction, config }) {
+  const includeDateObjects = useMemo(() => {
+    return uniqueDates.map(d => new Date(d));
+  }, [uniqueDates]);
+
+  const handleDateChange = (date, setDateFunc) => {
+    if (!date) return;
+    const idx = includeDateObjects.findIndex(d => 
+      d.getFullYear() === date.getFullYear() && 
+      d.getMonth() === date.getMonth() && 
+      d.getDate() === date.getDate()
+    );
+    if (idx !== -1) {
+      setDateFunc(uniqueDates[idx]);
+    }
+  };
+
   const chartData = useMemo(() => {
     const isSeattleToKirkland = direction === 'seattle_to_kirkland';
     
@@ -110,6 +128,14 @@ export default function DateComparisonChart({ history, date1, date2, setDate1, s
 
   return (
     <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 mb-8">
+      <style>{`
+        .react-datepicker-wrapper {
+          width: auto;
+        }
+        .react-datepicker__input-container input {
+          width: 120px;
+        }
+      `}</style>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
@@ -120,21 +146,21 @@ export default function DateComparisonChart({ history, date1, date2, setDate1, s
         </div>
 
         <div className="flex items-center gap-4">
-          <select
-            value={date1 || ''}
-            onChange={(e) => setDate1(e.target.value)}
-            className="bg-slate-800 border border-blue-500/50 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
-          >
-            {uniqueDates.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+          <DatePicker
+            selected={date1 ? new Date(date1) : null}
+            onChange={(date) => handleDateChange(date, setDate1)}
+            includeDates={includeDateObjects}
+            dateFormat="MMM d, yyyy"
+            className="bg-slate-800 border border-blue-500/50 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 cursor-pointer text-center"
+          />
           <span className="text-slate-400 text-sm">vs</span>
-          <select
-            value={date2 || ''}
-            onChange={(e) => setDate2(e.target.value)}
-            className="bg-slate-800 border border-orange-500/50 text-slate-200 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2"
-          >
-            {uniqueDates.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+          <DatePicker
+            selected={date2 ? new Date(date2) : null}
+            onChange={(date) => handleDateChange(date, setDate2)}
+            includeDates={includeDateObjects}
+            dateFormat="MMM d, yyyy"
+            className="bg-slate-800 border border-orange-500/50 text-slate-200 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2 cursor-pointer text-center"
+          />
         </div>
       </div>
 
