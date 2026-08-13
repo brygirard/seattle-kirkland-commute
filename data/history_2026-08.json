@@ -87722,5 +87722,31 @@
     },
     "toll520": 4.9,
     "incidents": 0
+  },
+  {
+    "timestamp": 1786579515511,
+    "morning": {
+      "sr520Time": 36,
+      "sr520Delay": 4,
+      "sr520SpeedMph": 19,
+      "i90Time": 50,
+      "i90Delay": 14,
+      "i90SpeedMph": 22
+    },
+    "evening": {
+      "sr520Time": 46,
+      "sr520Delay": 18,
+      "sr520SpeedMph": 14,
+      "i90Time": 51,
+      "i90Delay": 10,
+      "i90SpeedMph": 21
+    },
+    "weather": {
+      "temp": 75,
+      "rain": 0,
+      "code": 0
+    },
+    "toll520": 4.9,
+    "incidents": 0
   }
 ]
