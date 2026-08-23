@@ -127,7 +127,7 @@ export default function DateComparisonChart({ history, date1, date2, setDate1, s
   };
 
   return (
-    <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 mb-8">
+    <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 h-full">
       <style>{`
         .react-datepicker-wrapper {
           width: auto;

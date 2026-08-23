@@ -113,7 +113,7 @@ export default function MultiDayChart({ history, multiDayActive, toggleMultiDay,
   const dayNamesFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   return (
-    <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 mb-8">
+    <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 h-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
