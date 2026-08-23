@@ -6,6 +6,7 @@ import InteractiveMap from './components/InteractiveMap';
 import DirectionTrendChart from './components/DirectionTrendChart';
 import MultiDayChart from './components/MultiDayChart';
 import DateComparisonChart from './components/DateComparisonChart';
+import HistoricalDowChart from './components/HistoricalDowChart';
 import { useCommuteState } from './hooks/useCommuteState';
 import { Settings as SettingsIcon, X } from 'lucide-react';
 
@@ -66,7 +67,7 @@ function SettingsModal({ config, updateConfig, onClose }) {
 function App() {
   const state = useCommuteState();
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('trend'); // 'trend', 'comparison', 'calendar'
+  const [activeTab, setActiveTab] = useState('trend'); // 'trend', 'comparison', 'calendar', 'historical_dow'
 
   return (
     <div className="min-h-screen bg-slate-900 p-4 md:p-8 font-sans">
@@ -112,6 +113,12 @@ function App() {
               >
                 Calendar Date Comparison
               </button>
+              <button 
+                onClick={() => setActiveTab('historical_dow')} 
+                className={`py-2 px-3 md:px-4 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === 'historical_dow' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-600'}`}
+              >
+                Last {state.historicalDowCount} {state.historicalDow}s
+              </button>
             </div>
 
             <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 mb-8 gap-4">
@@ -146,6 +153,41 @@ function App() {
                       <option value="Sunday">Sunday</option>
                     </select>
                   </div>
+                )}
+
+                {activeTab === 'historical_dow' && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-slate-300">Select Day:</span>
+                      <select
+                        value={state.historicalDow}
+                        onChange={(e) => state.setHistoricalDow(e.target.value)}
+                        className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2"
+                      >
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-slate-300">Weeks:</span>
+                      <select
+                        value={state.historicalDowCount}
+                        onChange={(e) => state.setHistoricalDowCount(parseInt(e.target.value, 10))}
+                        className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2"
+                      >
+                        <option value={5}>Last 5</option>
+                        <option value={10}>Last 10</option>
+                        <option value={15}>Last 15</option>
+                        <option value={20}>Last 20</option>
+                      </select>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -228,6 +270,24 @@ function App() {
                     setDate1={state.setCompareDate1}
                     setDate2={state.setCompareDate2}
                     uniqueDates={state.uniqueDates}
+                    direction="kirkland_to_seattle"
+                    config={state.config}
+                  />
+                </>
+              )}
+              {activeTab === 'historical_dow' && (
+                <>
+                  <HistoricalDowChart 
+                    history={state.history}
+                    dayOfWeek={state.historicalDow}
+                    numWeeks={state.historicalDowCount}
+                    direction="seattle_to_kirkland"
+                    config={state.config}
+                  />
+                  <HistoricalDowChart 
+                    history={state.history}
+                    dayOfWeek={state.historicalDow}
+                    numWeeks={state.historicalDowCount}
                     direction="kirkland_to_seattle"
                     config={state.config}
                   />

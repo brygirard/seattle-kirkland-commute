@@ -27,6 +27,8 @@ export function useCommuteState() {
 
   const [compareDate1, setCompareDate1] = useState(null);
   const [compareDate2, setCompareDate2] = useState(null);
+  const [historicalDow, setHistoricalDow] = useState('Monday');
+  const [historicalDowCount, setHistoricalDowCount] = useState(10);
 
   // Load history on mount
   useEffect(() => {
@@ -160,6 +162,10 @@ export function useCommuteState() {
     setCompareDate1,
     compareDate2,
     setCompareDate2,
+    historicalDow,
+    setHistoricalDow,
+    historicalDowCount,
+    setHistoricalDowCount,
     refresh: fetchLiveTraffic
   };
 }
