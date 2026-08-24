@@ -70,8 +70,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('trend'); // 'trend', 'comparison', 'calendar', 'historical_dow'
 
   return (
-    <div className="min-h-screen bg-slate-900 p-3 sm:p-6 font-sans">
-      <div className="w-full max-w-[98%] 2xl:max-w-[1920px] mx-auto">
+    <div className="min-h-screen bg-slate-900 p-3 sm:p-5 font-sans w-full">
+      <div className="w-full">
         <Header 
           config={state.config} 
           updateConfig={state.updateConfig} 
