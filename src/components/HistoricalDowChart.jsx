@@ -91,7 +91,7 @@ function IndividualDayMiniChart({ dateStr, dayHistory, isSeattleToKirkland, conf
   };
 
   return (
-    <div className="w-[340px] sm:w-[400px] flex-shrink-0 snap-start bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 flex flex-col shadow-lg">
+    <div className="w-[360px] sm:w-[450px] md:w-[500px] flex-shrink-0 snap-start bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 flex flex-col shadow-lg">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-semibold text-slate-100 border-l-2 border-emerald-400 pl-2">
           {dateStr}
