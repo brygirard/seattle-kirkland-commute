@@ -71940,5 +71940,31 @@
     },
     "toll520": 4.9,
     "incidents": 0
+  },
+  {
+    "timestamp": 1789053022314,
+    "morning": {
+      "sr520Time": 27,
+      "sr520Delay": 0,
+      "sr520SpeedMph": 25,
+      "i90Time": 34,
+      "i90Delay": 1,
+      "i90SpeedMph": 30
+    },
+    "evening": {
+      "sr520Time": 33,
+      "sr520Delay": 7,
+      "sr520SpeedMph": 20,
+      "i90Time": 36,
+      "i90Delay": 2,
+      "i90SpeedMph": 28
+    },
+    "weather": {
+      "temp": 59,
+      "rain": 0,
+      "code": 3
+    },
+    "toll520": 4.9,
+    "incidents": 0
   }
 ]
