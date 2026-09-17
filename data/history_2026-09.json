@@ -125942,5 +125942,31 @@
     },
     "toll520": 3.6,
     "incidents": 0
+  },
+  {
+    "timestamp": 1789681515480,
+    "morning": {
+      "sr520Time": 31,
+      "sr520Delay": 6,
+      "sr520SpeedMph": 22,
+      "i90Time": 36,
+      "i90Delay": 0,
+      "i90SpeedMph": 30
+    },
+    "evening": {
+      "sr520Time": 27,
+      "sr520Delay": 2,
+      "sr520SpeedMph": 24,
+      "i90Time": 42,
+      "i90Delay": 5,
+      "i90SpeedMph": 23
+    },
+    "weather": {
+      "temp": 70,
+      "rain": 0,
+      "code": 0
+    },
+    "toll520": 3.6,
+    "incidents": 0
   }
 ]
