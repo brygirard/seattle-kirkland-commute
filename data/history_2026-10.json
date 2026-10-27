@@ -201212,5 +201212,31 @@
     },
     "toll520": 4.9,
     "incidents": 0
+  },
+  {
+    "timestamp": 1793144715093,
+    "morning": {
+      "sr520Time": 36,
+      "sr520Delay": 7,
+      "sr520SpeedMph": 19,
+      "i90Time": 42,
+      "i90Delay": 5,
+      "i90SpeedMph": 26
+    },
+    "evening": {
+      "sr520Time": 42,
+      "sr520Delay": 13,
+      "sr520SpeedMph": 16,
+      "i90Time": 48,
+      "i90Delay": 9,
+      "i90SpeedMph": 21
+    },
+    "weather": {
+      "temp": 52,
+      "rain": 0,
+      "code": 3
+    },
+    "toll520": 4.9,
+    "incidents": 0
   }
 ]
