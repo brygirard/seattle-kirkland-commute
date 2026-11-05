@@ -30522,5 +30522,31 @@
     },
     "toll520": 4.9,
     "incidents": 226
+  },
+  {
+    "timestamp": 1793844615445,
+    "morning": {
+      "sr520Time": 27,
+      "sr520Delay": 0,
+      "sr520SpeedMph": 26,
+      "i90Time": 33,
+      "i90Delay": 1,
+      "i90SpeedMph": 33
+    },
+    "evening": {
+      "sr520Time": 38,
+      "sr520Delay": 10,
+      "sr520SpeedMph": 17,
+      "i90Time": 43,
+      "i90Delay": 11,
+      "i90SpeedMph": 23
+    },
+    "weather": {
+      "temp": 51,
+      "rain": 0,
+      "code": 3
+    },
+    "toll520": 4.9,
+    "incidents": 208
   }
 ]
